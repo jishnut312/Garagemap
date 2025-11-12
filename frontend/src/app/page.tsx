@@ -44,22 +44,61 @@ export default function Home() {
             </p>
           </div>
           
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
-            <a href="/find-garage" className="bg-red-400 text-white px-8 py-4 rounded-full font-medium text-lg hover:bg-red-500 hover:scale-105 transition-all duration-300 shadow-2xl flex items-center gap-3">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              Find Nearest Garage
-            </a>
-            <a href="/request-mechanic" className="border-2 border-slate-900 text-slate-900 px-8 py-4 rounded-full font-medium text-lg hover:bg-slate-900 hover:text-white transition-all duration-300 flex items-center gap-3">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              Request a Mechanic
-            </a>
+          {/* Service Cards */}
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto pt-8">
+            {/* Find Garage Card */}
+            <div className="bg-white rounded-3xl p-8 shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-105 border border-slate-100 relative overflow-hidden">
+              <div className="relative z-10">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-16 h-16 bg-red-400 rounded-2xl flex items-center justify-center">
+                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-slate-900">GARAGE FINDER</h3>
+                    <p className="text-slate-600 font-medium">LOCATE NEARBY SPACES</p>
+                  </div>
+                </div>
+                <p className="text-red-500 font-bold text-lg mb-6">FIND IN MINUTES</p>
+                <a href="/find-garage" className="bg-red-400 text-white px-8 py-4 rounded-2xl font-semibold text-lg hover:bg-red-500 transition-all duration-300 inline-flex items-center gap-3 shadow-lg">
+                  Explore
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  </svg>
+                </a>
+              </div>
+              <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-red-100 rounded-full opacity-20"></div>
+              <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-red-200 rounded-full opacity-30"></div>
+            </div>
+            
+            {/* Request Mechanic Card */}
+            <div className="bg-white rounded-3xl p-8 shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-105 border border-slate-100 relative overflow-hidden">
+              <div className="relative z-10">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center">
+                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-slate-900">MECHANIC SERVICE</h3>
+                    <p className="text-slate-600 font-medium">PROFESSIONAL REPAIRS</p>
+                  </div>
+                </div>
+                <p className="text-slate-700 font-bold text-lg mb-6">ON-DEMAND HELP</p>
+                <a href="/request-mechanic" className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-semibold text-lg hover:bg-slate-800 transition-all duration-300 inline-flex items-center gap-3 shadow-lg">
+                  Explore
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  </svg>
+                </a>
+              </div>
+              <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-slate-100 rounded-full opacity-20"></div>
+              <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-slate-200 rounded-full opacity-30"></div>
+            </div>
           </div>
         </div>
 
@@ -145,6 +184,69 @@ export default function Home() {
               <p className="text-slate-600 leading-relaxed">
                 Get professional service with transparent pricing. Pay securely through our platform with full protection.
               </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Professional Mechanics Section */}
+        <div className="mt-32">
+          <div className="bg-white rounded-3xl p-8 md:p-12 border border-slate-200 shadow-xl">
+            <div className="grid lg:grid-cols-2 gap-12 items-center">
+              <div className="space-y-6">
+                <h2 className="text-4xl font-bold text-slate-900">Professional Mechanics You Can Trust</h2>
+                <p className="text-xl text-slate-600 leading-relaxed">
+                  Our certified mechanics bring years of experience and expertise to every job. From routine maintenance to complex repairs, we ensure your vehicle receives the highest quality care.
+                </p>
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-red-400 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <span className="text-slate-700 font-medium">ASE Certified Technicians</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-red-400 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <span className="text-slate-700 font-medium">Modern Diagnostic Equipment</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-red-400 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <span className="text-slate-700 font-medium">Quality Parts & Warranty</span>
+                  </div>
+                </div>
+                <div className="pt-4">
+                  <a href="/mechanics" className="bg-red-400 text-white px-8 py-4 rounded-full font-medium text-lg hover:bg-red-500 transition-all duration-300 inline-flex items-center gap-3">
+                    Find a Mechanic
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </a>
+                </div>
+              </div>
+              <div className="relative">
+                <div className="aspect-[4/3] bg-slate-100 rounded-2xl overflow-hidden shadow-2xl">
+                  <img 
+                    src="/images/mechanic-working.jpg" 
+                    alt="Professional mechanic working on car engine in modern garage"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="absolute -bottom-6 -right-6 bg-white rounded-2xl p-6 shadow-xl border border-slate-200">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-slate-900">15+</div>
+                    <div className="text-slate-600 font-medium">Years Experience</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
