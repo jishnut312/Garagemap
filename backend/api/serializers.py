@@ -42,6 +42,19 @@ class ServiceRequestSerializer(serializers.ModelSerializer):
         read_only_fields = ['status', 'distance_km', 'created_at', 'accepted_at', 'completed_at', 'updated_at']
 
 
+class MechanicSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    workshops = serializers.SerializerMethodField()
+
+    class Meta:
+        model = UserProfile
+        fields = ['id', 'user', 'user_type', 'phone', 'profile_image', 'latitude', 'longitude', 'workshops', 'created_at']
+
+    def get_workshops(self, obj):
+        workshops = Workshop.objects.filter(owner=obj.user)
+        return WorkshopSerializer(workshops, many=True).data
+
+
 class ReviewSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     workshop = WorkshopSerializer(read_only=True)

@@ -12,9 +12,8 @@ export default function SignupPage() {
     password: '',
     confirmPassword: '',
     phone: '',
-    vehicleType: '',
-    vehicleModel: '',
-    vehicleYear: '',
+    userType: 'user',
+    workshopAddress: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -47,7 +46,16 @@ export default function SignupPage() {
     }
 
     try {
-      await signUp(formData.email, formData.password, formData.name);
+      const additionalData: any = {
+        phone: formData.phone,
+        userType: formData.userType,
+      };
+
+      if (formData.userType === 'mechanic') {
+        additionalData.workshopAddress = formData.workshopAddress;
+      }
+
+      await signUp(formData.email, formData.password, formData.name, additionalData);
       router.push('/dashboard');
     } catch (err) {
       setError('Failed to create account. Please try again.');
@@ -131,6 +139,40 @@ export default function SignupPage() {
               />
             </div>
 
+            <fieldset className="space-y-3">
+              <legend className="text-sm font-medium text-gray-700 dark:text-gray-300">Sign up as:</legend>
+              <div className="flex space-x-6">
+                <div className="flex items-center">
+                  <input
+                    id="user"
+                    name="userType"
+                    type="radio"
+                    value="user"
+                    checked={formData.userType === 'user'}
+                    onChange={handleChange}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                  />
+                  <label htmlFor="user" className="ml-3 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    User
+                  </label>
+                </div>
+                <div className="flex items-center">
+                  <input
+                    id="mechanic"
+                    name="userType"
+                    type="radio"
+                    value="mechanic"
+                    checked={formData.userType === 'mechanic'}
+                    onChange={handleChange}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                  />
+                  <label htmlFor="mechanic" className="ml-3 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Mechanic
+                  </label>
+                </div>
+              </div>
+            </fieldset>
+
             <div>
               <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Phone Number
@@ -146,57 +188,25 @@ export default function SignupPage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label htmlFor="vehicleType" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Vehicle Type
-                </label>
-                <select
-                  id="vehicleType"
-                  name="vehicleType"
-                  value={formData.vehicleType}
-                  onChange={handleChange}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                >
-                  <option value="">Select</option>
-                  <option value="car">Car</option>
-                  <option value="bike">Bike</option>
-                  <option value="truck">Truck</option>
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="vehicleModel" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Model
-                </label>
-                <input
-                  id="vehicleModel"
-                  name="vehicleModel"
-                  type="text"
-                  value={formData.vehicleModel}
-                  onChange={handleChange}
-                  className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                  placeholder="Model"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="vehicleYear" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Year
-                </label>
-                <input
-                  id="vehicleYear"
-                  name="vehicleYear"
-                  type="number"
-                  min="1990"
-                  max="2024"
-                  value={formData.vehicleYear}
-                  onChange={handleChange}
-                  className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                  placeholder="Year"
-                />
-              </div>
-            </div>
+            {formData.userType === 'mechanic' && (
+              <>
+                <div>
+                  <label htmlFor="workshopAddress" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Workshop Address
+                  </label>
+                  <input
+                    id="workshopAddress"
+                    name="workshopAddress"
+                    type="text"
+                    required={formData.userType === 'mechanic'}
+                    value={formData.workshopAddress}
+                    onChange={handleChange}
+                    className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                    placeholder="Enter your workshop address"
+                  />
+                </div>
+              </>
+            )}
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">

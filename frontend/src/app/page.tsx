@@ -33,20 +33,19 @@ export default function Home() {
         <div className="text-center space-y-8">
           <div className="space-y-6">
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-light text-slate-900 leading-tight tracking-tight">
-              Create Amazing
-              <span className="block font-medium text-slate-700">
-                Garage Experiences
+              <span className="block text-slate-600 font-light">
+                Find the Right Garage. Book in Minutes.
               </span>
             </h1>
             
             <p className="text-xl md:text-2xl text-slate-600 max-w-4xl mx-auto font-light leading-relaxed">
-              Build smart garage solutions that connect vehicle owners with premium spaces and trusted mechanics worldwide.
+              Complete automotive repair and maintenance services with state-of-the-art workshop facilities and certified technicians.
             </p>
           </div>
           
           {/* Service Cards */}
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto pt-8">
-            {/* Find Garage Card */}
+            {/* Find Nearest Workshop Card */}
             <div className="bg-white rounded-3xl p-8 shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-105 border border-slate-100 relative overflow-hidden">
               <div className="relative z-10">
                 <div className="flex items-center gap-4 mb-4">
@@ -57,13 +56,13 @@ export default function Home() {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold text-slate-900">GARAGE FINDER</h3>
-                    <p className="text-slate-600 font-medium">LOCATE NEARBY SPACES</p>
+                    <h3 className="text-2xl font-bold text-slate-900">FIND WORKSHOP</h3>
+                    <p className="text-slate-600 font-medium">NEAREST LOCATIONS</p>
                   </div>
                 </div>
-                <p className="text-red-500 font-bold text-lg mb-6">FIND IN MINUTES</p>
-                <a href="/find-garage" className="bg-red-400 text-white px-8 py-4 rounded-2xl font-semibold text-lg hover:bg-red-500 transition-all duration-300 inline-flex items-center gap-3 shadow-lg">
-                  Explore
+                <p className="text-red-500 font-bold text-lg mb-6">LOCATE NEARBY</p>
+                <a href="/map-workshop" className="bg-red-400 text-white px-8 py-4 rounded-2xl font-semibold text-lg hover:bg-red-500 transition-all duration-300 inline-flex items-center gap-3 shadow-lg">
+                  Find Workshops
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                   </svg>
@@ -79,18 +78,17 @@ export default function Home() {
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center">
                     <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold text-slate-900">MECHANIC SERVICE</h3>
-                    <p className="text-slate-600 font-medium">PROFESSIONAL REPAIRS</p>
+                    <h3 className="text-2xl font-bold text-slate-900">CONNECT MECHANIC</h3>
+                    <p className="text-slate-600 font-medium">EXPERT PROFESSIONALS</p>
                   </div>
                 </div>
-                <p className="text-slate-700 font-bold text-lg mb-6">ON-DEMAND HELP</p>
-                <a href="/request-mechanic" className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-semibold text-lg hover:bg-slate-800 transition-all duration-300 inline-flex items-center gap-3 shadow-lg">
-                  Explore
+                <p className="text-slate-700 font-bold text-lg mb-6">INSTANT CONNECTION</p>
+                <a href="/connect-mechanic" className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-semibold text-lg hover:bg-slate-800 transition-all duration-300 inline-flex items-center gap-3 shadow-lg">
+                  Connect Now
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                   </svg>
@@ -146,47 +144,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* How It Works Section */}
-        <div className="mt-32">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">How It Works</h2>
-            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              Get connected with trusted garages and mechanics in just three simple steps
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-3 gap-12">
-            <div className="text-center space-y-6">
-              <div className="w-20 h-20 bg-red-400 rounded-full flex items-center justify-center mx-auto">
-                <span className="text-white font-bold text-2xl">1</span>
-              </div>
-              <h3 className="text-2xl font-semibold text-slate-900">Search & Find</h3>
-              <p className="text-slate-600 leading-relaxed">
-                Enter your location and find nearby garages or request a mechanic. Filter by services, ratings, and availability.
-              </p>
-            </div>
-            
-            <div className="text-center space-y-6">
-              <div className="w-20 h-20 bg-slate-900 rounded-full flex items-center justify-center mx-auto">
-                <span className="text-white font-bold text-2xl">2</span>
-              </div>
-              <h3 className="text-2xl font-semibold text-slate-900">Connect & Book</h3>
-              <p className="text-slate-600 leading-relaxed">
-                View detailed profiles, read reviews, and book your preferred garage space or mechanic service instantly.
-              </p>
-            </div>
-            
-            <div className="text-center space-y-6">
-              <div className="w-20 h-20 bg-red-400 rounded-full flex items-center justify-center mx-auto">
-                <span className="text-white font-bold text-2xl">3</span>
-              </div>
-              <h3 className="text-2xl font-semibold text-slate-900">Service & Pay</h3>
-              <p className="text-slate-600 leading-relaxed">
-                Get professional service with transparent pricing. Pay securely through our platform with full protection.
-              </p>
-            </div>
-          </div>
-        </div>
 
         {/* Professional Mechanics Section */}
         <div className="mt-32">
@@ -308,67 +265,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Why Choose GarageMap Section */}
-        <div className="mt-32">
-          <div className="bg-slate-900 rounded-3xl p-12 md:p-16 text-white">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold mb-4">Why Choose GarageMap?</h2>
-              <p className="text-xl text-slate-300 max-w-2xl mx-auto">
-                The most trusted platform for automotive services with unmatched reliability and convenience
-              </p>
-            </div>
-            
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 bg-red-400 rounded-2xl flex items-center justify-center mx-auto">
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-semibold">Verified Providers</h3>
-                <p className="text-slate-300 leading-relaxed">
-                  All garages and mechanics are thoroughly vetted and verified for quality and safety standards.
-                </p>
-              </div>
-              
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto">
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-semibold">Real-time Availability</h3>
-                <p className="text-slate-300 leading-relaxed">
-                  Live booking system shows real-time availability and instant confirmation for all services.
-                </p>
-              </div>
-              
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 bg-red-400 rounded-2xl flex items-center justify-center mx-auto">
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-semibold">Transparent Pricing</h3>
-                <p className="text-slate-300 leading-relaxed">
-                  No hidden fees or surprise charges. See exact pricing upfront before booking any service.
-                </p>
-              </div>
-              
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto">
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-semibold">Insurance Coverage</h3>
-                <p className="text-slate-300 leading-relaxed">
-                  Full insurance protection for all transactions and services booked through our platform.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
       </main>
 
       {/* Footer */}

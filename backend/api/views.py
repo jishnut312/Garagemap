@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from .models import UserProfile, Workshop, ServiceRequest, Review
 from .serializers import (
     UserSerializer, UserProfileSerializer, WorkshopSerializer,
-    ServiceRequestSerializer, ReviewSerializer
+    ServiceRequestSerializer, ReviewSerializer, MechanicSerializer
 )
 
 
@@ -94,3 +94,29 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=request.user)
+
+
+class MechanicViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = UserProfile.objects.filter(user_type='mechanic').select_related('user')
+    serializer_class = MechanicSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user_lat = self.request.query_params.get('user_lat')
+        user_lon = self.request.query_params.get('user_lon')
+        if user_lat and user_lon:
+            try:
+                user_lat = float(user_lat)
+                user_lon = float(user_lon)
+                # Approximate distance using Euclidean (for small areas, km approx)
+                # Distance in km: sqrt((lat_diff * 111)^2 + (lon_diff * 111 * cos(lat))^2)
+                # But for simplicity, order by lat and lon diff
+                queryset = queryset.extra(
+                    select={'distance': 'SQRT(POW((latitude - %s) * 111, 2) + POW((longitude - %s) * 111, 2))'},
+                    select_params=[user_lat, user_lon],
+                    order_by=['distance']
+                ).filter(latitude__isnull=False, longitude__isnull=False)
+            except ValueError:
+                pass
+        return queryset

@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { mechanicAPI, type Mechanic } from '@/lib/api';
+import { getMechanics, type Mechanic, createRequest } from '@/lib/firestore';
 import { Search, MapPin, Phone, Star, Clock, Filter } from 'lucide-react';
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [mechanics, setMechanics] = useState<Mechanic[]>([]);
   const [filteredMechanics, setFilteredMechanics] = useState<Mechanic[]>([]);
   const [loading, setLoading] = useState(true);
@@ -15,48 +16,7 @@ export default function DashboardPage() {
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Mock mechanics data for demo
-  const mockMechanics: Mechanic[] = [
-    {
-      id: 1,
-      name: 'John Smith',
-      phone: '+1234567890',
-      workshop_name: 'Smith Auto Repair',
-      latitude: 40.7128,
-      longitude: -74.0060,
-      services: ['car', 'emergency'],
-      rating: 4.5,
-      is_open: true,
-      photo: 'https://via.placeholder.com/100',
-      reviews_count: 23
-    },
-    {
-      id: 2,
-      name: 'Maria Garcia',
-      phone: '+1234567891',
-      workshop_name: 'Garcia Bike Service',
-      latitude: 40.7589,
-      longitude: -73.9851,
-      services: ['bike', 'emergency'],
-      rating: 4.8,
-      is_open: true,
-      photo: 'https://via.placeholder.com/100',
-      reviews_count: 45
-    },
-    {
-      id: 3,
-      name: 'Ahmed Hassan',
-      phone: '+1234567892',
-      workshop_name: 'Hassan Motors',
-      latitude: 40.7282,
-      longitude: -73.7949,
-      services: ['car', 'truck', 'towing'],
-      rating: 4.2,
-      is_open: false,
-      photo: 'https://via.placeholder.com/100',
-      reviews_count: 18
-    }
-  ];
+  const router = useRouter();
 
   useEffect(() => {
     // Get user location
@@ -76,11 +36,32 @@ export default function DashboardPage() {
       );
     }
 
-    // Load mechanics (using mock data for now)
-    setMechanics(mockMechanics);
-    setFilteredMechanics(mockMechanics);
-    setLoading(false);
+    const fetchMechanics = async () => {
+      // Load mechanics (from Firestore)
+      const fetchedMechanics = await getMechanics();
+      setMechanics(fetchedMechanics);
+      setFilteredMechanics(fetchedMechanics);
+      setLoading(false);
+    };
+
+    fetchMechanics();
   }, []);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    router.push('/login');
+    return null;
+  }
 
   useEffect(() => {
     // Filter mechanics based on search and service type
@@ -113,9 +94,29 @@ export default function DashboardPage() {
     return R * c;
   };
 
-  const handleRequestService = (mechanicId: number) => {
-    // This will open a modal or navigate to request page
-    alert(`Service request sent to mechanic ${mechanicId}`);
+  const handleRequestService = async (mechanicId: string) => {
+    if (!user) return;
+
+    try {
+      // Find the mechanic details
+      const mechanic = mechanics.find(m => m.id === mechanicId);
+      if (!mechanic) return;
+
+      await createRequest({
+        userId: user.uid,
+        mechanicId,
+        userName: user.displayName || user.email || 'User',
+        mechanicName: mechanic.name,
+        serviceType: 'general', // Could be made dynamic
+        status: 'pending',
+        description: 'Service request from dashboard',
+      });
+
+      alert('Service request sent successfully!');
+    } catch (error) {
+      console.error('Error creating request:', error);
+      alert('Failed to send service request. Please try again.');
+    }
   };
 
   if (loading) {
