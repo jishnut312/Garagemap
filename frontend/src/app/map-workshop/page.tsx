@@ -79,8 +79,30 @@ export default function MapWorkshop() {
   const [selectedWorkshop, setSelectedWorkshop] = useState<Workshop | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [userLocation, setUserLocation] = useState<string>('');
+  const [userPos, setUserPos] = useState<{lat: number, lng: number} | null>(null);
   const [sortBy, setSortBy] = useState<'distance' | 'rating'>('distance');
   const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
+
+  // Calculate distance between two coordinates using Haversine formula
+  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  // Get distance string for display
+  const getDistanceString = (workshop: Workshop): string => {
+    if (userPos) {
+      const dist = calculateDistance(userPos.lat, userPos.lng, workshop.lat, workshop.lng);
+      return dist < 1 ? `${(dist * 1000).toFixed(0)} m` : `${dist.toFixed(1)} km`;
+    }
+    return workshop.distance;
+  };
 
   const filteredWorkshops = mockWorkshops
     .filter(workshop => 
@@ -90,6 +112,12 @@ export default function MapWorkshop() {
     .sort((a, b) => {
       if (sortBy === 'rating') {
         return b.rating - a.rating;
+      }
+      // Use calculated distance if user position available, otherwise use mock distance
+      if (userPos) {
+        const distA = calculateDistance(userPos.lat, userPos.lng, a.lat, a.lng);
+        const distB = calculateDistance(userPos.lat, userPos.lng, b.lat, b.lng);
+        return distA - distB;
       }
       return parseFloat(a.distance) - parseFloat(b.distance);
     });
@@ -165,11 +193,18 @@ export default function MapWorkshop() {
             lat: position.coords.latitude,
             lng: position.coords.longitude
           };
+          setUserPos(userPos);
           setUserLocation(`${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`);
           
-          // Center map on user location
-          map.setCenter(userPos);
-          map.setZoom(15);
+          // Create bounds including user location and all workshops
+          const bounds = new google.maps.LatLngBounds();
+          bounds.extend(userPos);
+          mockWorkshops.forEach(workshop => {
+            bounds.extend({ lat: workshop.lat, lng: workshop.lng });
+          });
+          
+          // Fit map to bounds
+          map.fitBounds(bounds);
           
           // Add user location marker
           new google.maps.Marker({
@@ -305,7 +340,7 @@ export default function MapWorkshop() {
                   </div>
                   
                   <p className="text-sm text-slate-600 mb-2">{workshop.address}</p>
-                  <p className="text-sm text-red-500 font-medium mb-3">{workshop.distance} away</p>
+                  <p className="text-sm text-red-500 font-medium mb-3">{getDistanceString(workshop)} away</p>
                   
                   <div className="flex flex-wrap gap-1 mb-3">
                     {workshop.services.slice(0, 2).map((service, index) => (
@@ -375,7 +410,7 @@ export default function MapWorkshop() {
                   </svg>
                   <span className="text-sm font-medium">{selectedWorkshop.rating}</span>
                 </div>
-                <span className="text-sm text-red-500 font-medium">{selectedWorkshop.distance}</span>
+                <span className="text-sm text-red-500 font-medium">{getDistanceString(selectedWorkshop)}</span>
                 <span className="text-sm text-slate-600">{selectedWorkshop.phone}</span>
               </div>
               
