@@ -1,8 +1,9 @@
-import { collection, getDocs, doc, setDoc, query, where, addDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, query, where, addDoc, updateDoc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from './firebase';
 
 export interface Mechanic {
   id: string;
+  userId?: string; // Link to the user account
   name: string;
   phone: string;
   workshop_name: string;
@@ -22,7 +23,8 @@ export interface Request {
   userName: string;
   mechanicName: string;
   serviceType: string;
-  status: 'pending' | 'accepted' | 'completed' | 'cancelled';
+  status: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'cancelled';
+  urgency?: 'low' | 'medium' | 'high' | 'emergency';
   description?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -146,5 +148,39 @@ export const updateRequestStatus = async (requestId: string, status: Request['st
   } catch (error) {
     console.error('Error updating request status:', error);
     throw error;
+  }
+};
+
+// Get mechanic by user ID
+export const getMechanicByUserId = async (userId: string): Promise<Mechanic | null> => {
+  try {
+    const q = query(collection(db, 'mechanics'), where('userId', '==', userId));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      return null;
+    }
+
+    const mechanicDoc = querySnapshot.docs[0];
+    return { id: mechanicDoc.id, ...mechanicDoc.data() } as Mechanic;
+  } catch (error) {
+    console.error('Error fetching mechanic by user ID:', error);
+    return null;
+  }
+};
+
+// Get a single mechanic by ID
+export const getMechanicById = async (mechanicId: string): Promise<Mechanic | null> => {
+  try {
+    const mechanicDoc = await getDoc(doc(db, 'mechanics', mechanicId));
+
+    if (!mechanicDoc.exists()) {
+      return null;
+    }
+
+    return { id: mechanicDoc.id, ...mechanicDoc.data() } as Mechanic;
+  } catch (error) {
+    console.error('Error fetching mechanic:', error);
+    return null;
   }
 };

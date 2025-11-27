@@ -13,10 +13,26 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedService, setSelectedService] = useState('');
-  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number, lng: number } | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
   const router = useRouter();
+
+  // Handle redirects based on auth state and user type
+  useEffect(() => {
+    if (authLoading) return; // Wait for auth to load
+
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+
+    // Redirect mechanics to their dashboard
+    if (user.userType === 'mechanic') {
+      router.push('/mechanic-dashboard');
+      return;
+    }
+  }, [user, authLoading, router]);
 
   useEffect(() => {
     // Get user location
@@ -47,6 +63,26 @@ export default function DashboardPage() {
     fetchMechanics();
   }, []);
 
+  useEffect(() => {
+    // Filter mechanics based on search and service type
+    let filtered = mechanics;
+
+    if (searchTerm) {
+      filtered = filtered.filter(mechanic =>
+        mechanic.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        mechanic.workshop_name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (selectedService) {
+      filtered = filtered.filter(mechanic =>
+        mechanic.services.includes(selectedService)
+      );
+    }
+
+    setFilteredMechanics(filtered);
+  }, [searchTerm, selectedService, mechanics]);
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -58,39 +94,26 @@ export default function DashboardPage() {
     );
   }
 
-  if (!user) {
-    router.push('/login');
-    return null;
+  if (!user || user.userType === 'mechanic') {
+    // Show loading while redirecting
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Redirecting...</p>
+        </div>
+      </div>
+    );
   }
-
-  useEffect(() => {
-    // Filter mechanics based on search and service type
-    let filtered = mechanics;
-
-    if (searchTerm) {
-      filtered = filtered.filter(mechanic => 
-        mechanic.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        mechanic.workshop_name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (selectedService) {
-      filtered = filtered.filter(mechanic => 
-        mechanic.services.includes(selectedService)
-      );
-    }
-
-    setFilteredMechanics(filtered);
-  }, [searchTerm, selectedService, mechanics]);
 
   const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
     const R = 6371; // Earth's radius in km
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLng = (lng2 - lng1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-              Math.sin(dLng/2) * Math.sin(dLng/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   };
 
@@ -168,7 +191,7 @@ export default function DashboardPage() {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
-            
+
             <select
               value={selectedService}
               onChange={(e) => setSelectedService(e.target.value)}
@@ -258,7 +281,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   </div>
-                  
+
                   {userLocation && (
                     <div className="text-right">
                       <div className="flex items-center text-gray-500 text-sm">

@@ -1,11 +1,11 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signInWithPopup, 
-  signOut as firebaseSignOut, 
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  signOut as firebaseSignOut,
   sendPasswordResetEmail,
   onAuthStateChanged,
   updateProfile,
@@ -19,6 +19,7 @@ interface User {
   email: string | null;
   displayName: string | null;
   photoURL: string | null;
+  userType?: 'customer' | 'mechanic' | 'admin';
 }
 
 interface AuthContextType {
@@ -46,14 +47,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        setUser({
-          uid: firebaseUser.uid,
-          email: firebaseUser.email,
-          displayName: firebaseUser.displayName,
-          photoURL: firebaseUser.photoURL,
-        });
+        // Fetch user profile from Firestore to get user type
+        try {
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          const userData = userDoc.data();
+
+          setUser({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            displayName: firebaseUser.displayName,
+            photoURL: firebaseUser.photoURL,
+            userType: userData?.userType || userData?.role || 'customer', // Default to customer if not set
+          });
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
+          // Set user without userType if fetch fails
+          setUser({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            displayName: firebaseUser.displayName,
+            photoURL: firebaseUser.photoURL,
+            userType: 'customer',
+          });
+        }
       } else {
         setUser(null);
       }
@@ -70,7 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (email: string, password: string, displayName: string, additionalData?: any) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(userCredential.user, { displayName });
-    
+
     // Save additional user data to Firestore
     await setDoc(doc(db, 'users', userCredential.user.uid), {
       email,
@@ -83,13 +101,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signInWithGoogle = async () => {
     const result = await signInWithPopup(auth, googleProvider);
     const user = result.user;
-    
+
+    // Check if user document exists
+    const userDocRef = doc(db, 'users', user.uid);
+    const userDocSnap = await getDoc(userDocRef);
+
     // Save or update user data in Firestore
-    await setDoc(doc(db, 'users', user.uid), {
+    await setDoc(userDocRef, {
       email: user.email,
       displayName: user.displayName,
       photoURL: user.photoURL,
-      createdAt: new Date(),
+      userType: userDocSnap.exists() && userDocSnap.data()?.userType
+        ? userDocSnap.data().userType
+        : 'customer', // Default to customer for new Google sign-ins
+      createdAt: userDocSnap.exists() ? userDocSnap.data().createdAt : new Date(),
     }, { merge: true });
   };
 
