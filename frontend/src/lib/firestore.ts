@@ -14,6 +14,7 @@ export interface Mechanic {
   is_open: boolean;
   photo: string;
   reviews_count: number;
+  city?: string;
 }
 
 export interface Request {
@@ -182,5 +183,35 @@ export const getMechanicById = async (mechanicId: string): Promise<Mechanic | nu
   } catch (error) {
     console.error('Error fetching mechanic:', error);
     return null;
+  }
+};
+
+// Create a new mechanic profile
+export const createMechanicProfile = async (
+  userId: string,
+  profileData: Omit<Mechanic, 'id' | 'userId'>
+): Promise<string> => {
+  try {
+    const docRef = await addDoc(collection(db, 'mechanics'), {
+      userId,
+      ...profileData,
+    });
+    return docRef.id;
+  } catch (error) {
+    console.error('Error creating mechanic profile:', error);
+    throw error;
+  }
+};
+
+// Update an existing mechanic profile
+export const updateMechanicProfile = async (
+  mechanicId: string,
+  profileData: Partial<Omit<Mechanic, 'id' | 'userId'>>
+): Promise<void> => {
+  try {
+    await updateDoc(doc(db, 'mechanics', mechanicId), profileData);
+  } catch (error) {
+    console.error('Error updating mechanic profile:', error);
+    throw error;
   }
 };

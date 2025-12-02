@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
@@ -15,93 +15,23 @@ import {
   Users,
   Car,
   Phone,
-  Mail,
-  Menu,
-  X
+  Mail
 } from 'lucide-react';
+import Navbar from '@/components/Navbar';
 
 export default function Home() {
-  const { user, loading } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const router = useRouter();
-
-  // Redirect mechanics to their dashboard, keep customers on home page
+  // Redirect mechanics to their home page, keep customers on home page
   useEffect(() => {
     if (!loading && user && user.userType === 'mechanic') {
-      router.push('/mechanic-dashboard');
+      router.push('/mechanic-home');
     }
   }, [user, loading, router]);
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans selection:bg-red-500 selection:text-white">
-      {/* Navigation */}
-      <nav className="fixed w-full z-50 top-0 start-0 border-b border-white/10 bg-slate-900/80 backdrop-blur-md supports-[backdrop-filter]:bg-slate-900/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            {/* Logo */}
-            <Link href="/" className="flex items-center space-x-3 group">
-              <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-red-500/25 transition-all duration-300">
-                <span className="text-white font-bold text-xl">G</span>
-              </div>
-              <span className="text-2xl font-bold text-white tracking-tight group-hover:text-red-400 transition-colors">
-                GarageMap
-              </span>
-            </Link>
-
-            {/* Desktop Menu */}
-            <div className="hidden md:flex items-center space-x-8">
-              <Link href="/" className="text-slate-300 hover:text-white font-medium transition-colors text-sm uppercase tracking-wider">Home</Link>
-              <Link href="/dashboard" className="text-slate-300 hover:text-white font-medium transition-colors text-sm uppercase tracking-wider">Garages</Link>
-              <Link href="/services" className="text-slate-300 hover:text-white font-medium transition-colors text-sm uppercase tracking-wider">Services</Link>
-
-              {!loading && !user && (
-                <Link href="/login" className="text-slate-300 hover:text-white font-medium transition-colors text-sm uppercase tracking-wider">Login</Link>
-              )}
-
-              <Link href="/emergency" className="group flex items-center gap-2 px-4 py-2 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all duration-300 border border-red-500/20">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                </span>
-                <span className="font-semibold text-sm">Emergency</span>
-              </Link>
-
-              {!loading && !user ? (
-                <Link href="/signup" className="bg-white text-slate-900 px-6 py-2.5 rounded-full font-bold text-sm hover:bg-slate-200 transition-all duration-300 shadow-lg shadow-white/10">
-                  Get Started
-                </Link>
-              ) : user && (
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-orange-600 rounded-full flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">
-                        {user.displayName?.charAt(0) || user.email?.charAt(0) || 'U'}
-                      </span>
-                    </div>
-                    <span className="text-white text-sm font-medium">
-                      {user.displayName || user.email}
-                    </span>
-                  </div>
-                  <button
-                    onClick={async () => {
-                      const { signOut } = await import('@/contexts/AuthContext');
-                      // Access signOut from useAuth hook
-                      window.location.href = '/';
-                    }}
-                    className="text-slate-300 hover:text-red-400 font-medium transition-colors text-sm uppercase tracking-wider"
-                  >
-                    Logout
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Mobile Menu Button (Placeholder) */}
-            <button className="md:hidden text-slate-300 hover:text-white">
-              <Menu className="w-6 h-6" />
-            </button>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* Hero Section */}
       <div className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden bg-slate-900">

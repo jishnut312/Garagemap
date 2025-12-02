@@ -86,16 +86,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signUp = async (email: string, password: string, displayName: string, additionalData?: any) => {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    await updateProfile(userCredential.user, { displayName });
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(userCredential.user, { displayName });
 
-    // Save additional user data to Firestore
-    await setDoc(doc(db, 'users', userCredential.user.uid), {
-      email,
-      displayName,
-      ...additionalData,
-      createdAt: new Date(),
-    });
+      // Save additional user data to Firestore
+      await setDoc(doc(db, 'users', userCredential.user.uid), {
+        email,
+        displayName,
+        ...additionalData,
+        createdAt: new Date(),
+      });
+    } catch (error: any) {
+      // Provide user-friendly error messages
+      if (error.code === 'auth/email-already-in-use') {
+        throw new Error('This email is already registered. Please use a different email or try logging in.');
+      } else if (error.code === 'auth/weak-password') {
+        throw new Error('Password is too weak. Please use at least 6 characters.');
+      } else if (error.code === 'auth/invalid-email') {
+        throw new Error('Invalid email address. Please check and try again.');
+      } else if (error.code === 'auth/operation-not-allowed') {
+        throw new Error('Email/password accounts are not enabled. Please contact support.');
+      } else {
+        throw new Error(error.message || 'Failed to create account. Please try again.');
+      }
+    }
   };
 
   const signInWithGoogle = async () => {

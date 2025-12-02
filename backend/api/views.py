@@ -38,7 +38,7 @@ class MeViewSet(viewsets.ViewSet):
 class WorkshopViewSet(viewsets.ModelViewSet):
     queryset = Workshop.objects.all()
     serializer_class = WorkshopSerializer
-    permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
 
     def perform_create(self, serializer):
         serializer.save(owner=request.user)
@@ -58,6 +58,17 @@ class WorkshopViewSet(viewsets.ModelViewSet):
         if page is not None:
             return self.get_paginated_response(self.serializer_class(page, many=True).data)
         return Response(self.serializer_class(items, many=True).data)
+
+    @action(detail=False, methods=['get'])
+    def my_workshop(self, request):
+        """Return the workshop owned by the current user."""
+        if not request.user.is_authenticated:
+            return Response({'detail': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        workshop = Workshop.objects.filter(owner=request.user).first()
+        if workshop:
+            return Response(self.serializer_class(workshop).data)
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
 class ServiceRequestViewSet(viewsets.ModelViewSet):

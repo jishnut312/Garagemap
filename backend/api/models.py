@@ -25,44 +25,62 @@ class UserProfile(models.Model):
 
 
 class Workshop(models.Model):
-    SERVICE_TYPE_CHOICES = [
-        ('car', 'Car Repair'),
-        ('bike', 'Bike Repair'),
-        ('both', 'Car & Bike'),
-        ('emergency', 'Emergency Service'),
-    ]
-
+    """
+    Workshop/Mechanic profile model.
+    Represents a mechanic's workshop with location, services, and availability.
+    """
+    
     AVAILABILITY_CHOICES = [
         ('available', 'Available'),
         ('busy', 'Busy'),
         ('offline', 'Offline'),
     ]
 
+    # Owner relationship
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='workshops')
-    name = models.CharField(max_length=200)
-    description = models.TextField(blank=True)
-    service_type = models.CharField(max_length=20, choices=SERVICE_TYPE_CHOICES)
+    
+    # Personal/Workshop Information
+    mechanic_name = models.CharField(max_length=200, help_text="Name of the mechanic")
+    workshop_name = models.CharField(max_length=200, help_text="Name of the workshop")
+    description = models.TextField(blank=True, help_text="Brief description of services and specialties")
     phone = models.CharField(max_length=20)
     email = models.EmailField(blank=True)
 
     # Location
-    address = models.TextField()
-    city = models.CharField(max_length=100)
-    state = models.CharField(max_length=100)
-    pincode = models.CharField(max_length=10)
+    address = models.TextField(blank=True, help_text="Full address of the workshop")
+    city = models.CharField(max_length=100, blank=True)
+    state = models.CharField(max_length=100, blank=True)
+    pincode = models.CharField(max_length=10, blank=True)
     latitude = models.DecimalField(max_digits=9, decimal_places=6)
     longitude = models.DecimalField(max_digits=9, decimal_places=6)
 
-    # Additional info
-    image = models.ImageField(upload_to='workshops/', blank=True, null=True)
-    availability = models.CharField(max_length=20, choices=AVAILABILITY_CHOICES, default='available')
+    # Services - stored as JSON array: ['car', 'bike', 'truck', 'emergency', 'towing', 'inspection']
+    services = models.JSONField(
+        default=list,
+        help_text="Array of services offered: car, bike, truck, emergency, towing, inspection"
+    )
+
+    # Media
+    photo = models.URLField(max_length=500, blank=True, help_text="Profile photo URL")
+    image = models.ImageField(upload_to='workshops/', blank=True, null=True, help_text="Uploaded image file")
+
+    # Status and Availability
+    is_open = models.BooleanField(default=True, help_text="Whether the workshop is currently open for business")
+    availability = models.CharField(
+        max_length=20, 
+        choices=AVAILABILITY_CHOICES, 
+        default='available',
+        help_text="Current availability status"
+    )
+    
+    # Ratings and Reviews
     rating = models.DecimalField(
         max_digits=3,
         decimal_places=2,
         default=0.0,
         validators=[MinValueValidator(0.0), MaxValueValidator(5.0)]
     )
-    total_reviews = models.IntegerField(default=0)
+    reviews_count = models.IntegerField(default=0, help_text="Total number of reviews")
 
     # Verification
     is_verified = models.BooleanField(default=False)
@@ -74,9 +92,23 @@ class Workshop(models.Model):
 
     class Meta:
         ordering = ['-rating', '-created_at']
+        indexes = [
+            models.Index(fields=['latitude', 'longitude']),
+            models.Index(fields=['is_open', 'availability']),
+            models.Index(fields=['-rating']),
+        ]
 
     def __str__(self):
-        return f"{self.name} - {self.city}"
+        return f"{self.workshop_name} - {self.mechanic_name}"
+
+    def update_rating(self):
+        """Calculate and update the average rating based on reviews"""
+        from django.db.models import Avg
+        avg_rating = self.reviews.aggregate(Avg('rating'))['rating__avg']
+        if avg_rating is not None:
+            self.rating = round(avg_rating, 2)
+            self.reviews_count = self.reviews.count()
+            self.save(update_fields=['rating', 'reviews_count'])
 
 
 class ServiceRequest(models.Model):
@@ -95,11 +127,21 @@ class ServiceRequest(models.Model):
         ('emergency', 'Emergency'),
     ]
 
+    # Service types - can accept any value from Workshop.services
+    SERVICE_TYPE_CHOICES = [
+        ('car', 'Car Repair'),
+        ('bike', 'Bike Repair'),
+        ('truck', 'Truck Repair'),
+        ('emergency', 'Emergency Service'),
+        ('towing', 'Towing Service'),
+        ('inspection', 'Vehicle Inspection'),
+    ]
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='service_requests')
     workshop = models.ForeignKey(Workshop, on_delete=models.CASCADE, related_name='service_requests')
 
     # Request details
-    service_type = models.CharField(max_length=20, choices=Workshop.SERVICE_TYPE_CHOICES)
+    service_type = models.CharField(max_length=20, choices=SERVICE_TYPE_CHOICES)
     description = models.TextField()
     urgency = models.CharField(max_length=20, choices=URGENCY_CHOICES, default='medium')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
@@ -122,7 +164,7 @@ class ServiceRequest(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"Request #{self.id} - {self.user.username} to {self.workshop.name}"
+        return f"Request #{self.id} - {self.user.username} to {self.workshop.workshop_name}"
 
 
 class Review(models.Model):
@@ -148,4 +190,4 @@ class Review(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"Review #{self.id} for {self.workshop.name}"
+        return f"Review #{self.id} for {self.workshop.workshop_name}"
