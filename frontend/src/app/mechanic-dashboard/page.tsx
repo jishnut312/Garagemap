@@ -26,7 +26,8 @@ import {
     LogOut,
     Building,
     Edit,
-    X
+    X,
+    Upload
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 
@@ -51,6 +52,8 @@ export default function MechanicDashboard() {
         reviews_count: 0
     });
     const [isSavingWorkshop, setIsSavingWorkshop] = useState(false);
+    const [workshopImageFile, setWorkshopImageFile] = useState<File | null>(null);
+    const [workshopImagePreview, setWorkshopImagePreview] = useState<string>('');
     const router = useRouter();
 
     useEffect(() => {
@@ -104,6 +107,9 @@ export default function MechanicDashboard() {
                 photo: mechanic.photo,
                 reviews_count: mechanic.reviews_count
             });
+            // Set existing photo as preview
+            setWorkshopImagePreview(mechanic.photo || '');
+            setWorkshopImageFile(null);
         } else {
             // Reset form for new workshop
             setWorkshopForm({
@@ -119,8 +125,62 @@ export default function MechanicDashboard() {
                 photo: '',
                 reviews_count: 0
             });
+            setWorkshopImagePreview('');
+            setWorkshopImageFile(null);
         }
         setShowWorkshopModal(true);
+    };
+
+    const handleWorkshopImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            console.log('Original file:', file.name, 'Size:', file.size, 'bytes');
+
+            // Compress image
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    // Max dimension 800px
+                    const MAX_SIZE = 800;
+                    if (width > height) {
+                        if (width > MAX_SIZE) {
+                            height *= MAX_SIZE / width;
+                            width = MAX_SIZE;
+                        }
+                    } else {
+                        if (height > MAX_SIZE) {
+                            width *= MAX_SIZE / height;
+                            height = MAX_SIZE;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx?.drawImage(img, 0, 0, width, height);
+
+                    // Compress to JPEG with 0.7 quality
+                    const base64String = canvas.toDataURL('image/jpeg', 0.7);
+                    console.log('Compressed base64 length:', base64String.length);
+
+                    setWorkshopImagePreview(base64String);
+                    setWorkshopForm({ ...workshopForm, photo: base64String });
+                };
+                img.src = event.target?.result as string;
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const removeWorkshopImage = () => {
+        setWorkshopImageFile(null);
+        setWorkshopImagePreview('');
+        setWorkshopForm({ ...workshopForm, photo: '' });
     };
 
     const handleWorkshopSubmit = async (e: React.FormEvent) => {
@@ -152,19 +212,29 @@ export default function MechanicDashboard() {
                 longitude: lon
             };
 
+            console.log('Saving workshop data:', {
+                ...dataToSave,
+                photo: dataToSave.photo ? `${dataToSave.photo.substring(0, 50)}... (${dataToSave.photo.length} chars)` : 'No photo'
+            });
+
             if (mechanic) {
+                console.log('Updating existing mechanic profile...');
                 // Update existing profile
                 await updateMechanicProfile(mechanic.id, dataToSave);
+                console.log('Profile updated. Fetching updated data...');
                 const updatedMechanic = await getMechanicByUserId(user.uid);
                 setMechanic(updatedMechanic);
                 alert('Workshop updated successfully!');
             } else {
+                console.log('Creating new mechanic profile...');
                 // Create new profile
                 await createMechanicProfile(user.uid, dataToSave);
+                console.log('Profile created. Fetching new data...');
                 const newMechanic = await getMechanicByUserId(user.uid);
                 setMechanic(newMechanic);
                 alert('Workshop created successfully!');
             }
+            console.log('Operation complete. Closing modal.');
             setShowWorkshopModal(false);
         } catch (error) {
             console.error('Error saving workshop:', error);
@@ -339,22 +409,38 @@ export default function MechanicDashboard() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-2">Workshop Image URL</label>
-                                        <input
-                                            type="url"
-                                            value={workshopForm.photo}
-                                            onChange={(e) => setWorkshopForm({ ...workshopForm, photo: e.target.value })}
-                                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                                            placeholder="https://example.com/photo.jpg"
-                                        />
-                                        {workshopForm.photo && (
-                                            <div className="mt-2 h-32 w-full relative rounded-xl overflow-hidden border border-slate-200">
-                                                <img
-                                                    src={workshopForm.photo}
-                                                    alt="Workshop Preview"
-                                                    className="object-cover w-full h-full"
-                                                    onError={(e) => (e.currentTarget.style.display = 'none')}
+                                        <label className="block text-sm font-medium text-slate-700 mb-2">Workshop Image</label>
+                                        {!workshopImagePreview ? (
+                                            <label htmlFor="workshopImage" className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-all duration-300 hover:border-red-400">
+                                                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                                    <Upload className="w-10 h-10 mb-3 text-slate-400 hover:text-red-500 transition-colors" />
+                                                    <p className="mb-2 text-sm text-slate-500">
+                                                        <span className="font-semibold">Click to upload</span> or drag and drop
+                                                    </p>
+                                                    <p className="text-xs text-slate-400">PNG, JPG or WEBP (MAX. 5MB)</p>
+                                                </div>
+                                                <input
+                                                    id="workshopImage"
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={handleWorkshopImageChange}
+                                                    className="hidden"
                                                 />
+                                            </label>
+                                        ) : (
+                                            <div className="relative w-full h-40 rounded-xl overflow-hidden border-2 border-red-500">
+                                                <img
+                                                    src={workshopImagePreview}
+                                                    alt="Workshop Preview"
+                                                    className="w-full h-full object-cover"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={removeWorkshopImage}
+                                                    className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
                                             </div>
                                         )}
                                     </div>
@@ -731,15 +817,41 @@ export default function MechanicDashboard() {
 
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-2">
-                                        Profile Photo URL
+                                        Workshop Image
                                     </label>
-                                    <input
-                                        type="url"
-                                        value={workshopForm.photo}
-                                        onChange={(e) => setWorkshopForm({ ...workshopForm, photo: e.target.value })}
-                                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                                        placeholder="https://example.com/photo.jpg"
-                                    />
+                                    {!workshopImagePreview ? (
+                                        <label htmlFor="workshopImageEdit" className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-all duration-300 hover:border-red-400">
+                                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                                <Upload className="w-10 h-10 mb-3 text-slate-400 hover:text-red-500 transition-colors" />
+                                                <p className="mb-2 text-sm text-slate-500">
+                                                    <span className="font-semibold">Click to upload</span> or drag and drop
+                                                </p>
+                                                <p className="text-xs text-slate-400">PNG, JPG or WEBP (MAX. 5MB)</p>
+                                            </div>
+                                            <input
+                                                id="workshopImageEdit"
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleWorkshopImageChange}
+                                                className="hidden"
+                                            />
+                                        </label>
+                                    ) : (
+                                        <div className="relative w-full h-40 rounded-xl overflow-hidden border-2 border-red-500">
+                                            <img
+                                                src={workshopImagePreview}
+                                                alt="Workshop Preview"
+                                                className="w-full h-full object-cover"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={removeWorkshopImage}
+                                                className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

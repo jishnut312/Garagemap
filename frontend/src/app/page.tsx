@@ -65,9 +65,9 @@ export default function Home() {
               Find Workshops
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
-            <Link href="/mechanics" className="w-full sm:w-auto px-8 py-4 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl font-bold text-lg transition-all duration-300 border border-slate-700 flex items-center justify-center gap-2">
+            <Link href="/find-mechanics" className="w-full sm:w-auto px-8 py-4 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl font-bold text-lg transition-all duration-300 border border-slate-700 flex items-center justify-center gap-2">
               <Wrench className="w-5 h-5" />
-              For Mechanics
+              Find Mechanics
             </Link>
           </div>
 
@@ -115,7 +115,7 @@ export default function Home() {
               <p className="text-slate-400 text-lg leading-relaxed mb-8">
                 Connect directly with certified professionals. View profiles, read reviews, and book appointments seamlessly.
               </p>
-              <Link href="/mechanics" className="inline-flex items-center text-white font-bold hover:gap-2 transition-all">
+              <Link href="/find-mechanics" className="inline-flex items-center text-white font-bold hover:gap-2 transition-all">
                 Find Experts <ArrowRight className="w-5 h-5 ml-2" />
               </Link>
             </div>

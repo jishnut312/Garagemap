@@ -246,7 +246,7 @@ export default function MapWorkshop() {
       {/* Main Content */}
       <div className="flex h-[calc(100vh-88px)]">
         {/* Sidebar */}
-        <div className="w-1/3 bg-white border-r border-slate-200 overflow-y-auto">
+        <div className="w-full bg-white overflow-y-auto">
           <div className="p-6">
             <h1 className="text-2xl font-bold text-slate-900 mb-2">Find Workshop</h1>
             <p className="text-slate-600 mb-6">Discover nearby automotive workshops and services</p>
@@ -261,6 +261,20 @@ export default function MapWorkshop() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
               Use My Location
+            </button>
+
+            {/* For Mechanics Button */}
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setSortBy('rating');
+              }}
+              className="w-full mb-4 bg-green-500 text-white px-4 py-3 rounded-xl font-medium hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              For Mechanics
             </button>
 
             {/* Search Bar */}
@@ -353,11 +367,11 @@ export default function MapWorkshop() {
                       )}
                     </div>
 
-                    <div className="flex space-x-2">
-                      <button className="flex-1 bg-red-400 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-red-500 transition-colors">
+                    <div className="flex gap-3">
+                      <button className="bg-red-400 text-white py-3 px-8 rounded-lg text-base font-medium hover:bg-red-500 transition-colors">
                         Book Now
                       </button>
-                      <button className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                      <button className="px-8 py-3 border border-slate-300 rounded-lg text-base font-medium hover:bg-slate-50 transition-colors">
                         Call
                       </button>
                     </div>
@@ -379,12 +393,11 @@ export default function MapWorkshop() {
           </div>
         </div>
 
-        {/* Google Maps Section */}
-        <div className="flex-1 relative">
-          {/* Google Maps Container */}
+
+        {/* Google Maps Section - Hidden */}
+        {/* <div className="flex-1 relative">
           <div ref={mapRef} className="w-full h-full" />
 
-          {/* Selected Workshop Info Card */}
           {selectedWorkshop && (
             <div className="absolute bottom-4 left-4 right-4 bg-white rounded-xl shadow-xl p-6 max-w-md mx-auto">
               <div className="flex justify-between items-start mb-4">
@@ -433,7 +446,8 @@ export default function MapWorkshop() {
               </div>
             </div>
           )}
-        </div>
+        </div> */}
+
       </div>
     </div>
   );

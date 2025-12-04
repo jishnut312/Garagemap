@@ -195,14 +195,14 @@ export default function DashboardPage() {
                 placeholder="Search mechanics or workshops..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
+                className="w-full pl-12 pr-4 py-3 border border-slate-400  text-slate-600 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
               />
             </div>
 
             <select
               value={selectedService}
               onChange={(e) => setSelectedService(e.target.value)}
-              className="px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white"
+              className="px-4 py-3 border border-slate-400 rounded-xl focus:ring-2 text-slate-600 focus:ring-red-500 focus:border-transparent bg-white"
             >
               <option value="">All Services</option>
               <option value="car">Car Service</option>
@@ -231,7 +231,7 @@ export default function DashboardPage() {
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     Distance
                   </label>
-                  <select className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                  <select className="w-full px-4 py-2.5 border border-slate-200 text-slate-500 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent">
                     <option>Within 5 km</option>
                     <option>Within 10 km</option>
                     <option>Within 20 km</option>
@@ -241,7 +241,7 @@ export default function DashboardPage() {
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     Rating
                   </label>
-                  <select className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                  <select className="w-full px-4 py-2.5 border border-slate-200  text-slate-500 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent">
                     <option>4+ Stars</option>
                     <option>3+ Stars</option>
                     <option>Any Rating</option>
@@ -251,7 +251,7 @@ export default function DashboardPage() {
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     Availability
                   </label>
-                  <select className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                  <select className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-slate-500  focus:ring-2 focus:ring-red-500 focus:border-transparent">
                     <option>Open Now</option>
                     <option>Open Today</option>
                     <option>Any Time</option>

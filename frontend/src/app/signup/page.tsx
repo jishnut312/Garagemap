@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import { Upload, X } from 'lucide-react';
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
@@ -19,15 +20,54 @@ export default function SignupPage() {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [profileImage, setProfileImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
 
   const { signUp, signInWithGoogle } = useAuth();
   const router = useRouter();
+
+  const availableServices = [
+    { id: 'car', label: 'Car Service', icon: '🚗' },
+    { id: 'bike', label: 'Bike Service', icon: '🏍️' },
+    { id: 'truck', label: 'Truck Service', icon: '🚚' },
+    { id: 'emergency', label: 'Emergency Service', icon: '🚨' },
+    { id: 'towing', label: 'Towing', icon: '🚛' },
+    { id: 'oil_change', label: 'Oil Change', icon: '🛢️' },
+    { id: 'tire', label: 'Tire Service', icon: '⚙️' },
+    { id: 'brake', label: 'Brake Service', icon: '🔧' },
+  ];
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData(prev => ({
       ...prev,
       [e.target.name]: e.target.value
     }));
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setProfileImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setProfileImage(null);
+    setImagePreview('');
+  };
+
+  const toggleService = (serviceId: string) => {
+    setSelectedServices(prev =>
+      prev.includes(serviceId)
+        ? prev.filter(s => s !== serviceId)
+        : [...prev, serviceId]
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,14 +87,29 @@ export default function SignupPage() {
       return;
     }
 
+    // Validate mechanic-specific fields
+    if (formData.userType === 'mechanic') {
+      if (selectedServices.length === 0) {
+        setError('Please select at least one service');
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
       const additionalData: any = {
         phone: formData.phone,
         userType: formData.userType,
       };
 
+      // Add profile image for all users if available
+      if (profileImage && imagePreview) {
+        additionalData.photo = imagePreview;
+      }
+
       if (formData.userType === 'mechanic') {
         additionalData.workshopAddress = formData.workshopAddress;
+        additionalData.services = selectedServices;
       }
 
       await signUp(formData.email, formData.password, formData.name, additionalData);
@@ -300,6 +355,88 @@ export default function SignupPage() {
                   </div>
                 </div>
               )}
+
+              {/* Profile Image Upload - for all users */}
+              <div className="group sm:col-span-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
+                  {formData.userType === 'mechanic' ? 'Workshop/Profile Image' : 'Profile Image'}
+                  <span className="text-gray-400 text-xs ml-2">(Optional)</span>
+                </label>
+                <div className="relative">
+                  {!imagePreview ? (
+                    <label htmlFor="profileImage" className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 group-hover:border-purple-400">
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <Upload className="w-10 h-10 mb-3 text-gray-400 group-hover:text-purple-500 transition-colors" />
+                        <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                          <span className="font-semibold">Click to upload</span> or drag and drop
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG or WEBP (MAX. 5MB)</p>
+                      </div>
+                      <input
+                        id="profileImage"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="hidden"
+                      />
+                    </label>
+                  ) : (
+                    <div className="relative w-full h-40 rounded-xl overflow-hidden border-2 border-purple-500">
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={removeImage}
+                        className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+
+              {/* Services Selection - conditional */}
+              {formData.userType === 'mechanic' && (
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">
+                    Services Offered <span className="text-red-500">*</span>
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {availableServices.map((service) => (
+                      <button
+                        key={service.id}
+                        type="button"
+                        onClick={() => toggleService(service.id)}
+                        className={`p-3 rounded-xl border-2 transition-all duration-300 ${selectedServices.includes(service.id)
+                          ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 shadow-md scale-105'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-600'
+                          }`}
+                      >
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="text-2xl">{service.icon}</span>
+                          <span className={`text-xs font-medium text-center ${selectedServices.includes(service.id)
+                            ? 'text-purple-700 dark:text-purple-400'
+                            : 'text-gray-700 dark:text-gray-300'
+                            }`}>
+                            {service.label}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  {selectedServices.length > 0 && (
+                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      {selectedServices.length} service{selectedServices.length !== 1 ? 's' : ''} selected
+                    </p>
+                  )}
+                </div>
+              )}
+
 
               {/* Password field */}
               <div className="group">
