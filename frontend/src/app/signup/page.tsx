@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Upload, X } from 'lucide-react';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { updateProfile } from 'firebase/auth';
+import { auth, db, storage } from '@/lib/firebase';
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
@@ -70,6 +74,27 @@ export default function SignupPage() {
     );
   };
 
+  const handleRedirect = async () => {
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const userData = userDoc.data();
+
+        if (userData?.userType === 'mechanic') {
+          router.push('/mechanic-home');
+        } else {
+          router.push('/');
+        }
+      } else {
+        router.push('/');
+      }
+    } catch (error) {
+      console.error('Error redirecting:', error);
+      router.push('/');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -102,23 +127,42 @@ export default function SignupPage() {
         userType: formData.userType,
       };
 
-      // Add profile image for all users if available
-      if (profileImage && imagePreview) {
-        additionalData.photo = imagePreview;
-      }
-
       if (formData.userType === 'mechanic') {
         additionalData.workshopAddress = formData.workshopAddress;
         additionalData.services = selectedServices;
       }
 
+      // 1. Create account (without photo initially to avoid size limits)
       await signUp(formData.email, formData.password, formData.name, additionalData);
 
-      // Wait a moment for auth state to update, then redirect based on user type
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 500);
+      // 2. Upload image if exists
+      if (profileImage && auth.currentUser) {
+        const uid = auth.currentUser.uid;
+        const storageRef = ref(storage, `profile_images/${uid}`);
+
+        try {
+          await uploadBytes(storageRef, profileImage);
+          const photoURL = await getDownloadURL(storageRef);
+
+          // Update Auth Profile
+          await updateProfile(auth.currentUser, { photoURL });
+
+          // Update Firestore Document
+          await updateDoc(doc(db, 'users', uid), {
+            photoURL: photoURL,
+            photo: photoURL // Keep legacy field if used elsewhere
+          });
+        } catch (uploadError) {
+          console.error("Failed to upload image:", uploadError);
+          // Don't fail the whole signup if image fails, just log it
+        }
+      }
+
+      // 3. Redirect
+      await handleRedirect();
+
     } catch (err: any) {
+      console.error(err);
       setError(err.message || 'Failed to create account. Please try again.');
     } finally {
       setLoading(false);

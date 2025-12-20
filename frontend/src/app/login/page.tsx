@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
+
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -15,6 +18,32 @@ export default function LoginPage() {
   const { signIn, signInWithGoogle } = useAuth();
   const router = useRouter();
 
+  const handleRedirect = async () => {
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const userData = userDoc.data();
+
+        if (userData?.userType === 'mechanic') {
+          router.push('/mechanic-home');
+        } else {
+          router.push('/');
+        }
+      } else {
+        router.push('/');
+      }
+    } catch (error: any) {
+      console.error('Error redirecting:', error);
+      if (error.code === 'permission-denied') {
+        setError('Access denied: Please check Firestore Security Rules in Firebase Console.');
+      } else {
+        // Only fallback to home if it's not a critical permission error
+        router.push('/');
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -22,10 +51,7 @@ export default function LoginPage() {
 
     try {
       await signIn(email, password);
-      // Redirect to home - mechanics will be auto-redirected to /mechanic-home
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 500);
+      await handleRedirect();
     } catch (err) {
       setError('Failed to sign in. Please check your credentials.');
     } finally {
@@ -39,10 +65,7 @@ export default function LoginPage() {
 
     try {
       await signInWithGoogle();
-      // Redirect to home - mechanics will be auto-redirected to /mechanic-home
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 500);
+      await handleRedirect();
     } catch (err) {
       setError('Failed to sign in with Google.');
     } finally {

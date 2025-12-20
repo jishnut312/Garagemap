@@ -27,7 +27,10 @@ import {
     Building,
     Edit,
     X,
-    Upload
+    Upload,
+    Calendar,
+    ChevronRight,
+    Search
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 
@@ -71,11 +74,9 @@ export default function MechanicDashboard() {
             if (!user) return;
 
             try {
-                // Fetch mechanic profile
                 const mechanicData = await getMechanicByUserId(user.uid);
                 setMechanic(mechanicData);
 
-                // Fetch service requests
                 if (mechanicData) {
                     const requestsData = await getMechanicRequests(mechanicData.id);
                     setRequests(requestsData);
@@ -89,8 +90,6 @@ export default function MechanicDashboard() {
 
         fetchData();
     }, [user, authLoading, router]);
-
-
 
     const openWorkshopModal = (editMode = false) => {
         if (editMode && mechanic) {
@@ -107,11 +106,9 @@ export default function MechanicDashboard() {
                 photo: mechanic.photo,
                 reviews_count: mechanic.reviews_count
             });
-            // Set existing photo as preview
             setWorkshopImagePreview(mechanic.photo || '');
             setWorkshopImageFile(null);
         } else {
-            // Reset form for new workshop
             setWorkshopForm({
                 name: '',
                 phone: '',
@@ -134,9 +131,6 @@ export default function MechanicDashboard() {
     const handleWorkshopImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            console.log('Original file:', file.name, 'Size:', file.size, 'bytes');
-
-            // Compress image
             const reader = new FileReader();
             reader.onload = (event) => {
                 const img = new Image();
@@ -144,8 +138,6 @@ export default function MechanicDashboard() {
                     const canvas = document.createElement('canvas');
                     let width = img.width;
                     let height = img.height;
-
-                    // Max dimension 800px
                     const MAX_SIZE = 800;
                     if (width > height) {
                         if (width > MAX_SIZE) {
@@ -158,16 +150,11 @@ export default function MechanicDashboard() {
                             height = MAX_SIZE;
                         }
                     }
-
                     canvas.width = width;
                     canvas.height = height;
                     const ctx = canvas.getContext('2d');
                     ctx?.drawImage(img, 0, 0, width, height);
-
-                    // Compress to JPEG with 0.7 quality
                     const base64String = canvas.toDataURL('image/jpeg', 0.7);
-                    console.log('Compressed base64 length:', base64String.length);
-
                     setWorkshopImagePreview(base64String);
                     setWorkshopForm({ ...workshopForm, photo: base64String });
                 };
@@ -189,7 +176,6 @@ export default function MechanicDashboard() {
 
         setIsSavingWorkshop(true);
         try {
-            // Geocode city to get coordinates
             let lat = workshopForm.latitude;
             let lon = workshopForm.longitude;
 
@@ -212,29 +198,15 @@ export default function MechanicDashboard() {
                 longitude: lon
             };
 
-            console.log('Saving workshop data:', {
-                ...dataToSave,
-                photo: dataToSave.photo ? `${dataToSave.photo.substring(0, 50)}... (${dataToSave.photo.length} chars)` : 'No photo'
-            });
-
             if (mechanic) {
-                console.log('Updating existing mechanic profile...');
-                // Update existing profile
                 await updateMechanicProfile(mechanic.id, dataToSave);
-                console.log('Profile updated. Fetching updated data...');
                 const updatedMechanic = await getMechanicByUserId(user.uid);
                 setMechanic(updatedMechanic);
-                alert('Workshop updated successfully!');
             } else {
-                console.log('Creating new mechanic profile...');
-                // Create new profile
                 await createMechanicProfile(user.uid, dataToSave);
-                console.log('Profile created. Fetching new data...');
                 const newMechanic = await getMechanicByUserId(user.uid);
                 setMechanic(newMechanic);
-                alert('Workshop created successfully!');
             }
-            console.log('Operation complete. Closing modal.');
             setShowWorkshopModal(false);
         } catch (error) {
             console.error('Error saving workshop:', error);
@@ -256,7 +228,6 @@ export default function MechanicDashboard() {
     const handleAcceptRequest = async (requestId: string) => {
         try {
             await updateRequestStatus(requestId, 'accepted');
-            // Refresh requests
             if (mechanic) {
                 const updatedRequests = await getMechanicRequests(mechanic.id);
                 setRequests(updatedRequests);
@@ -270,7 +241,6 @@ export default function MechanicDashboard() {
     const handleRejectRequest = async (requestId: string) => {
         try {
             await updateRequestStatus(requestId, 'cancelled');
-            // Refresh requests
             if (mechanic) {
                 const updatedRequests = await getMechanicRequests(mechanic.id);
                 setRequests(updatedRequests);
@@ -284,7 +254,6 @@ export default function MechanicDashboard() {
     const handleCompleteRequest = async (requestId: string) => {
         try {
             await updateRequestStatus(requestId, 'completed');
-            // Refresh requests
             if (mechanic) {
                 const updatedRequests = await getMechanicRequests(mechanic.id);
                 setRequests(updatedRequests);
@@ -295,21 +264,12 @@ export default function MechanicDashboard() {
         }
     };
 
-    const handleLogout = async () => {
-        try {
-            await signOut();
-            router.push('/');
-        } catch (error) {
-            console.error('Error signing out:', error);
-        }
-    };
-
     if (authLoading || loading) {
         return (
             <div className="min-h-screen bg-slate-50 flex items-center justify-center">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto"></div>
-                    <p className="mt-4 text-slate-600">Loading dashboard...</p>
+                    <p className="mt-4 text-slate-600 font-medium">Loading dashboard...</p>
                 </div>
             </div>
         );
@@ -317,193 +277,27 @@ export default function MechanicDashboard() {
 
     if (!mechanic) {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-                <div className="text-center max-w-md">
-                    <Building className="w-20 h-20 text-red-500 mx-auto mb-4" />
-                    <h2 className="text-2xl font-bold text-slate-900 mb-2">Workshop Profile Not Found</h2>
-                    <p className="text-slate-600 mb-6">
-                        Set up your workshop profile to start receiving service requests from customers.
-                    </p>
-                    <button
-                        onClick={() => openWorkshopModal(false)}
-                        className="px-8 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors font-semibold shadow-lg"
-                    >
-                        Add Workshop
-                    </button>
-                </div>
-                {/* Workshop Modal for New Profile */}
-                {showWorkshopModal && (
-                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                        <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                            <div className="sticky top-0 bg-white border-b border-slate-200 p-6 flex items-center justify-between rounded-t-3xl">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-orange-600 rounded-xl flex items-center justify-center">
-                                        <Building className="w-6 h-6 text-white" />
-                                    </div>
-                                    <div>
-                                        <h2 className="text-2xl font-bold text-slate-900">
-                                            Add Workshop
-                                        </h2>
-                                        <p className="text-sm text-slate-600">Update your workshop information</p>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => setShowWorkshopModal(false)}
-                                    className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-100 transition-colors"
-                                >
-                                    <X className="w-5 h-5 text-slate-600" />
-                                </button>
-                            </div>
-
-                            <form onSubmit={handleWorkshopSubmit} className="p-6 space-y-6">
-                                {/* Personal Information */}
-                                <div className="space-y-4">
-                                    <h3 className="text-lg font-semibold text-slate-900">Personal Information</h3>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-2">Your Name *</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={workshopForm.name}
-                                            onChange={(e) => setWorkshopForm({ ...workshopForm, name: e.target.value })}
-                                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                                            placeholder="John Doe"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-2">Phone Number *</label>
-                                        <input
-                                            type="tel"
-                                            required
-                                            value={workshopForm.phone}
-                                            onChange={(e) => setWorkshopForm({ ...workshopForm, phone: e.target.value })}
-                                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                                            placeholder="+1234567890"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Workshop Information */}
-                                <div className="space-y-4">
-                                    <h3 className="text-lg font-semibold text-slate-900">Workshop Information</h3>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-2">Workshop Name *</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={workshopForm.workshop_name}
-                                            onChange={(e) => setWorkshopForm({ ...workshopForm, workshop_name: e.target.value })}
-                                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                                            placeholder="ABC Auto Repair"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-2">City *</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={workshopForm.city}
-                                            onChange={(e) => setWorkshopForm({ ...workshopForm, city: e.target.value })}
-                                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                                            placeholder="New York"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-2">Workshop Image</label>
-                                        {!workshopImagePreview ? (
-                                            <label htmlFor="workshopImage" className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-all duration-300 hover:border-red-400">
-                                                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                                    <Upload className="w-10 h-10 mb-3 text-slate-400 hover:text-red-500 transition-colors" />
-                                                    <p className="mb-2 text-sm text-slate-500">
-                                                        <span className="font-semibold">Click to upload</span> or drag and drop
-                                                    </p>
-                                                    <p className="text-xs text-slate-400">PNG, JPG or WEBP (MAX. 5MB)</p>
-                                                </div>
-                                                <input
-                                                    id="workshopImage"
-                                                    type="file"
-                                                    accept="image/*"
-                                                    onChange={handleWorkshopImageChange}
-                                                    className="hidden"
-                                                />
-                                            </label>
-                                        ) : (
-                                            <div className="relative w-full h-40 rounded-xl overflow-hidden border-2 border-red-500">
-                                                <img
-                                                    src={workshopImagePreview}
-                                                    alt="Workshop Preview"
-                                                    className="w-full h-full object-cover"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={removeWorkshopImage}
-                                                    className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
-                                                >
-                                                    <X className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Services */}
-                                <div className="space-y-4">
-                                    <h3 className="text-lg font-semibold text-slate-900">Services Offered</h3>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        {['car', 'bike', 'truck', 'emergency', 'towing', 'inspection'].map((service) => (
-                                            <button
-                                                key={service}
-                                                type="button"
-                                                onClick={() => handleServiceToggle(service)}
-                                                className={`px-4 py-3 rounded-xl font-medium transition-all ${workshopForm.services.includes(service)
-                                                    ? 'bg-red-500 text-white shadow-lg'
-                                                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                                                    }`}
-                                            >
-                                                {service.charAt(0).toUpperCase() + service.slice(1)}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Workshop Status */}
-                                <div className="space-y-4">
-                                    <h3 className="text-lg font-semibold text-slate-900">Workshop Status</h3>
-                                    <div className="flex items-center gap-3">
-                                        <input
-                                            type="checkbox"
-                                            id="is_open"
-                                            checked={workshopForm.is_open}
-                                            onChange={(e) => setWorkshopForm({ ...workshopForm, is_open: e.target.checked })}
-                                            className="w-5 h-5 text-red-500 border-slate-300 rounded focus:ring-red-500"
-                                        />
-                                        <label htmlFor="is_open" className="text-sm font-medium text-slate-700">
-                                            Workshop is currently open for business
-                                        </label>
-                                    </div>
-                                </div>
-
-                                {/* Submit Button */}
-                                <div className="flex gap-3 pt-4 border-t border-slate-200">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowWorkshopModal(false)}
-                                        className="flex-1 px-6 py-3 bg-slate-100 text-slate-700 rounded-xl font-semibold hover:bg-slate-200 transition-colors"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={isSavingWorkshop}
-                                        className="flex-1 px-6 py-3 bg-gradient-to-r from-red-500 to-orange-600 text-white rounded-xl font-semibold hover:from-red-600 hover:to-orange-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        {isSavingWorkshop ? 'Saving...' : 'Add Workshop'}
-                                    </button>
-                                </div>
-                            </form>
+            <div className="min-h-screen bg-slate-50 relative">
+                <Navbar />
+                <div className="flex items-center justify-center min-h-[calc(100vh-80px)] pt-20">
+                    <div className="text-center max-w-lg mx-auto p-8 rounded-3xl bg-white shadow-xl border border-slate-100">
+                        <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <Building className="w-10 h-10 text-red-500" />
                         </div>
+                        <h2 className="text-3xl font-bold text-slate-900 mb-4">Setup Your Workshop</h2>
+                        <p className="text-slate-600 mb-8 text-lg">
+                            Complete your workshop profile to start receiving service requests from customers nearby.
+                        </p>
+                        <button
+                            onClick={() => openWorkshopModal(false)}
+                            className="w-full px-8 py-4 bg-gradient-to-r from-red-600 to-orange-600 text-white rounded-xl hover:from-red-500 hover:to-orange-500 transition-all font-bold shadow-xl shadow-red-500/20 hover:shadow-red-500/30 transform hover:scale-[1.02] active:scale-[0.98]"
+                        >
+                            Create Workshop Profile
+                        </button>
                     </div>
-                )}
+                </div>
+                {/* Modal (included below) */}
+                {renderWorkshopModal()}
             </div>
         );
     }
@@ -517,33 +311,231 @@ export default function MechanicDashboard() {
             activeTab === 'active' ? activeRequests :
                 completedRequests;
 
+    function renderWorkshopModal() {
+        if (!showWorkshopModal) return null;
+        return (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+                <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+                    <div className="sticky top-0 bg-white/95 backdrop-blur-sm border-b border-slate-200 p-6 flex items-center justify-between rounded-t-3xl z-10">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-red-500/20">
+                                <Building className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-bold text-slate-900">
+                                    {mechanic ? 'Edit Workshop' : 'Add Workshop'}
+                                </h2>
+                                <p className="text-sm text-slate-500 font-medium">Update your workshop details</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setShowWorkshopModal(false)}
+                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+
+                    <form onSubmit={handleWorkshopSubmit} className="p-8 space-y-8">
+                        {/* Personal Information */}
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 pb-2 border-b border-slate-100">
+                                <User className="w-5 h-5 text-red-500" /> Personal Information
+                            </h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Your Name</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={workshopForm.name}
+                                        onChange={(e) => setWorkshopForm({ ...workshopForm, name: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all font-medium"
+                                        placeholder="John Doe"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Phone Number</label>
+                                    <input
+                                        type="tel"
+                                        required
+                                        value={workshopForm.phone}
+                                        onChange={(e) => setWorkshopForm({ ...workshopForm, phone: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all font-medium"
+                                        placeholder="+1234567890"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Workshop Information */}
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 pb-2 border-b border-slate-100">
+                                <Building className="w-5 h-5 text-red-500" /> Workshop Details
+                            </h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="sm:col-span-2">
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Workshop Name</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={workshopForm.workshop_name}
+                                        onChange={(e) => setWorkshopForm({ ...workshopForm, workshop_name: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all font-medium"
+                                        placeholder="Awesome Auto Repair"
+                                    />
+                                </div>
+                                <div className="sm:col-span-2">
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">City</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={workshopForm.city}
+                                        onChange={(e) => setWorkshopForm({ ...workshopForm, city: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all font-medium"
+                                        placeholder="City, State"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">Workshop Image</label>
+                                {!workshopImagePreview ? (
+                                    <label className="relative flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-slate-300 rounded-2xl cursor-pointer hover:bg-slate-50 transition-all hover:border-red-400 group">
+                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                            <div className="w-12 h-12 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 group-hover:bg-red-100 transition-all">
+                                                <Upload className="w-6 h-6" />
+                                            </div>
+                                            <p className="mb-1 text-sm text-slate-500 font-medium">Click to upload photo</p>
+                                            <p className="text-xs text-slate-400">PNG, JPG or WEBP (MAX. 5MB)</p>
+                                        </div>
+                                        <input type="file" className="hidden" accept="image/*" onChange={handleWorkshopImageChange} />
+                                    </label>
+                                ) : (
+                                    <div className="relative w-full h-48 rounded-2xl overflow-hidden group shadow-md ring-1 ring-slate-200">
+                                        <img src={workshopImagePreview} alt="Preview" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <button
+                                                type="button"
+                                                onClick={removeWorkshopImage}
+                                                className="bg-white text-red-600 p-3 rounded-full hover:bg-red-50 transition-all transform hover:scale-110 shadow-lg"
+                                            >
+                                                <X className="w-6 h-6" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Services */}
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 pb-2 border-b border-slate-100">
+                                <Wrench className="w-5 h-5 text-red-500" /> Services Offered
+                            </h3>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                {['car', 'bike', 'truck', 'emergency', 'towing', 'inspection'].map((service) => (
+                                    <button
+                                        key={service}
+                                        type="button"
+                                        onClick={() => handleServiceToggle(service)}
+                                        className={`px-4 py-3 rounded-xl font-bold text-sm transition-all border transform active:scale-[0.98] ${workshopForm.services.includes(service)
+                                            ? 'bg-red-50 border-red-200 text-red-600 shadow-sm ring-1 ring-red-200'
+                                            : 'bg-white border-slate-200 text-slate-600 hover:border-red-200 hover:bg-slate-50'
+                                            }`}
+                                    >
+                                        {service.charAt(0).toUpperCase() + service.slice(1)}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Submit Button */}
+                        <div className="flex gap-4 pt-6 mt-4 border-t border-slate-100">
+                            <button
+                                type="button"
+                                onClick={() => setShowWorkshopModal(false)}
+                                className="flex-1 px-6 py-4 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold hover:bg-slate-50 hover:border-slate-300 hover:text-slate-900 transition-all transform active:scale-[0.98]"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={isSavingWorkshop}
+                                className="flex-1 px-6 py-4 bg-gradient-to-r from-red-600 to-orange-600 text-white rounded-xl font-bold hover:from-red-500 hover:to-orange-500 transition-all shadow-lg shadow-red-500/25 hover:shadow-red-500/40 hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                            >
+                                {isSavingWorkshop ? 'Saving...' : (mechanic ? 'Save Changes' : 'Create Workshop')}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-slate-50">
             <Navbar />
-            {/* Header */}
-            <header className="bg-white shadow-sm border-b sticky top-20 z-40 mt-20">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center py-4">
-                        <div className="flex items-center space-x-4">
-                            <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
-                                <Wrench className="w-6 h-6 text-white" />
+
+            <main className="pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
+                {/* Hero Section */}
+                <div className="relative overflow-hidden bg-white rounded-[2rem] shadow-xl border border-slate-100 p-8 mb-8">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-red-50 rounded-full blur-3xl opacity-50 -translate-y-1/2 translate-x-1/4" />
+
+                    <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div className="flex items-center gap-6">
+                            <div className="relative">
+                                {mechanic?.photo ? (
+                                    <img
+                                        src={mechanic.photo}
+                                        alt={mechanic.workshop_name}
+                                        className="w-24 h-24 rounded-2xl object-cover shadow-lg border-4 border-white"
+                                    />
+                                ) : (
+                                    <div className="w-24 h-24 bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl flex items-center justify-center border-4 border-white shadow-lg">
+                                        <Wrench className="w-10 h-10 text-slate-400" />
+                                    </div>
+                                )}
+                                <div className={`absolute -bottom-2 -right-2 px-3 py-1 rounded-full text-xs font-bold shadow-md border-2 border-white ${mechanic?.is_open ? 'bg-green-500 text-white' : 'bg-slate-800 text-white'}`}>
+                                    {mechanic?.is_open ? 'OPEN' : 'CLOSED'}
+                                </div>
                             </div>
                             <div>
-                                <h1 className="text-xl font-bold text-slate-900">{mechanic.workshop_name}</h1>
-                                <p className="text-sm text-slate-600">{mechanic.name}</p>
+                                <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{mechanic?.workshop_name}</h1>
+                                <div className="flex items-center gap-2 mt-2 text-slate-600">
+                                    <User className="w-4 h-4" />
+                                    <span className="font-medium">{mechanic?.name}</span>
+                                    <span className="mx-2 text-slate-300">|</span>
+                                    <MapPin className="w-4 h-4" />
+                                    <span>{mechanic?.city || 'No Location'}</span>
+                                </div>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <div className="flex text-yellow-500">
+                                        {[...Array(5)].map((_, i) => (
+                                            <Star key={i} className={`w-4 h-4 ${i < Math.floor(mechanic?.rating || 0) ? 'fill-current' : 'text-slate-200 fill-slate-200'}`} />
+                                        ))}
+                                    </div>
+                                    <span className="text-sm font-medium text-slate-600">
+                                        ({mechanic?.rating.toFixed(1)}) • {mechanic?.reviews_count} reviews
+                                    </span>
+                                </div>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2">
+
+                        <div className="flex items-center gap-3">
                             <button
                                 onClick={() => openWorkshopModal(true)}
-                                className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                className="flex items-center gap-2 px-5 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300 transition-all font-bold shadow-sm hover:shadow active:scale-[0.98]"
                             >
                                 <Edit className="w-4 h-4" />
                                 <span className="hidden sm:inline">Edit Workshop</span>
                             </button>
                             <button
-                                onClick={handleLogout}
-                                className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                onClick={async () => {
+                                    await signOut();
+                                    router.push('/');
+                                }}
+                                className="flex items-center gap-2 px-5 py-3 bg-white border border-red-100 text-red-600 rounded-xl hover:bg-red-50 hover:border-red-200 transition-all font-bold active:scale-[0.98]"
                             >
                                 <LogOut className="w-4 h-4" />
                                 <span className="hidden sm:inline">Logout</span>
@@ -551,168 +543,214 @@ export default function MechanicDashboard() {
                         </div>
                     </div>
                 </div>
-            </header>
 
-            {/* Stats Section */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {/* KPI Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center">
-                                <Clock className="w-6 h-6 text-orange-500" />
+                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow group">
+                        <div className="flex items-start justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-slate-500 group-hover:text-red-500 transition-colors">Pending Requests</p>
+                                <h3 className="text-3xl font-bold text-slate-900 mt-2">{pendingRequests.length}</h3>
+                            </div>
+                            <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center text-orange-500 group-hover:scale-110 transition-transform">
+                                <Clock className="w-6 h-6" />
                             </div>
                         </div>
-                        <div className="text-3xl font-bold text-slate-900">{pendingRequests.length}</div>
-                        <div className="text-sm text-slate-600 mt-1">Pending Requests</div>
                     </div>
 
-                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
-                                <TrendingUp className="w-6 h-6 text-blue-500" />
+                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow group">
+                        <div className="flex items-start justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-slate-500 group-hover:text-blue-500 transition-colors">Active Jobs</p>
+                                <h3 className="text-3xl font-bold text-slate-900 mt-2">{activeRequests.length}</h3>
+                            </div>
+                            <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
+                                <TrendingUp className="w-6 h-6" />
                             </div>
                         </div>
-                        <div className="text-3xl font-bold text-slate-900">{activeRequests.length}</div>
-                        <div className="text-sm text-slate-600 mt-1">Active Jobs</div>
                     </div>
 
-                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center">
-                                <CheckCircle className="w-6 h-6 text-green-500" />
+                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow group">
+                        <div className="flex items-start justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-slate-500 group-hover:text-green-500 transition-colors">Completed</p>
+                                <h3 className="text-3xl font-bold text-slate-900 mt-2">{completedRequests.length}</h3>
+                            </div>
+                            <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center text-green-500 group-hover:scale-110 transition-transform">
+                                <CheckCircle className="w-6 h-6" />
                             </div>
                         </div>
-                        <div className="text-3xl font-bold text-slate-900">{completedRequests.length}</div>
-                        <div className="text-sm text-slate-600 mt-1">Completed</div>
                     </div>
 
-                    <div className="bg-gradient-to-br from-red-500 to-orange-600 rounded-2xl p-6 shadow-lg text-white">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                                <Star className="w-6 h-6 text-white" />
+                    <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 shadow-lg shadow-slate-900/10 text-white group">
+                        <div className="flex items-start justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-slate-400 group-hover:text-white transition-colors">Total Revenue</p>
+                                <h3 className="text-3xl font-bold text-white mt-2">$0.00</h3>
+                            </div>
+                            <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center text-white group-hover:scale-110 transition-transform">
+                                <span className="text-xl font-bold">$</span>
                             </div>
                         </div>
-                        <div className="text-3xl font-bold">{mechanic.rating.toFixed(1)}</div>
-                        <div className="text-sm text-white/80 mt-1">Average Rating</div>
+                        <div className="mt-4 text-xs text-slate-400 bg-white/5 inline-block px-2 py-1 rounded-lg border border-white/5">
+                            Coming Soon
+                        </div>
                     </div>
                 </div>
 
-                {/* Tabs */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                    <div className="border-b border-slate-200">
-                        <div className="flex">
+                {/* Main Content Areas */}
+                <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden min-h-[500px]">
+                    <div className="border-b border-slate-100 sticky top-0 bg-white/95 backdrop-blur-sm z-10 px-8 pt-6">
+                        <div className="flex items-center gap-8">
                             <button
                                 onClick={() => setActiveTab('pending')}
-                                className={`flex-1 px-6 py-4 font-semibold text-sm transition-colors ${activeTab === 'pending'
-                                    ? 'text-red-500 border-b-2 border-red-500 bg-red-50/50'
-                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                                className={`pb-4 px-2 font-bold text-sm transition-all relative ${activeTab === 'pending'
+                                    ? 'text-red-600'
+                                    : 'text-slate-500 hover:text-slate-700'
                                     }`}
                             >
-                                Pending ({pendingRequests.length})
+                                Pending Requests
+                                <span className={`ml-2 px-2.5 py-0.5 rounded-full text-xs ${activeTab === 'pending' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'}`}>
+                                    {pendingRequests.length}
+                                </span>
+                                {activeTab === 'pending' && (
+                                    <div className="absolute bottom-0 left-0 w-full h-0.5 bg-red-600 rounded-t-full" />
+                                )}
                             </button>
                             <button
                                 onClick={() => setActiveTab('active')}
-                                className={`flex-1 px-6 py-4 font-semibold text-sm transition-colors ${activeTab === 'active'
-                                    ? 'text-red-500 border-b-2 border-red-500 bg-red-50/50'
-                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                                className={`pb-4 px-2 font-bold text-sm transition-all relative ${activeTab === 'active'
+                                    ? 'text-red-600'
+                                    : 'text-slate-500 hover:text-slate-700'
                                     }`}
                             >
-                                Active ({activeRequests.length})
+                                Active Jobs
+                                <span className={`ml-2 px-2.5 py-0.5 rounded-full text-xs ${activeTab === 'active' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'}`}>
+                                    {activeRequests.length}
+                                </span>
+                                {activeTab === 'active' && (
+                                    <div className="absolute bottom-0 left-0 w-full h-0.5 bg-red-600 rounded-t-full" />
+                                )}
                             </button>
                             <button
                                 onClick={() => setActiveTab('completed')}
-                                className={`flex-1 px-6 py-4 font-semibold text-sm transition-colors ${activeTab === 'completed'
-                                    ? 'text-red-500 border-b-2 border-red-500 bg-red-50/50'
-                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                                className={`pb-4 px-2 font-bold text-sm transition-all relative ${activeTab === 'completed'
+                                    ? 'text-red-600'
+                                    : 'text-slate-500 hover:text-slate-700'
                                     }`}
                             >
-                                Completed ({completedRequests.length})
+                                Completed History
+                                <span className={`ml-2 px-2.5 py-0.5 rounded-full text-xs ${activeTab === 'completed' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'}`}>
+                                    {completedRequests.length}
+                                </span>
+                                {activeTab === 'completed' && (
+                                    <div className="absolute bottom-0 left-0 w-full h-0.5 bg-red-600 rounded-t-full" />
+                                )}
                             </button>
                         </div>
                     </div>
 
-                    {/* Request List */}
-                    <div className="p-6">
+                    <div className="p-8 bg-slate-50/30 min-h-full">
                         {displayRequests.length === 0 ? (
-                            <div className="text-center py-12">
-                                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <Wrench className="w-8 h-8 text-slate-400" />
+                            <div className="flex flex-col items-center justify-center py-20 text-center">
+                                <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6 shadow-sm border border-slate-100">
+                                    <Search className="w-10 h-10 text-slate-300" />
                                 </div>
-                                <h3 className="text-lg font-semibold text-slate-900 mb-2">No {activeTab} requests</h3>
-                                <p className="text-slate-600">
-                                    {activeTab === 'pending' && "You're all caught up! New requests will appear here."}
-                                    {activeTab === 'active' && "No active jobs at the moment."}
-                                    {activeTab === 'completed' && "No completed jobs yet."}
+                                <h3 className="text-xl font-bold text-slate-900 mb-2">No {activeTab} requests</h3>
+                                <p className="text-slate-500 max-w-md">
+                                    {activeTab === 'pending' && "You're all caught up! New service requests will appear here instantly."}
+                                    {activeTab === 'active' && "You don't have any active jobs right now."}
+                                    {activeTab === 'completed' && "Your completed jobs history will show up here."}
                                 </p>
                             </div>
                         ) : (
-                            <div className="space-y-4">
+                            <div className="grid grid-cols-1 gap-4">
                                 {displayRequests.map((request) => (
                                     <div
                                         key={request.id}
-                                        className="bg-slate-50 rounded-xl p-6 border border-slate-200 hover:border-red-200 hover:shadow-md transition-all"
+                                        className="group bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg hover:border-red-200 transition-all duration-300"
                                     >
-                                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                                             <div className="flex-1">
-                                                <div className="flex items-start justify-between mb-3">
+                                                <div className="flex items-center gap-4 mb-3">
+                                                    <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-600 font-bold text-lg border border-slate-200">
+                                                        {request.userName?.charAt(0) || <User className="w-6 h-6" />}
+                                                    </div>
                                                     <div>
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            <User className="w-4 h-4 text-slate-500" />
-                                                            <span className="font-semibold text-slate-900">{request.userName}</span>
-                                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${request.urgency === 'emergency' ? 'bg-red-100 text-red-700' :
-                                                                request.urgency === 'high' ? 'bg-orange-100 text-orange-700' :
-                                                                    request.urgency === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                                                                        'bg-green-100 text-green-700'
-                                                                }`}>
-                                                                {request.urgency}
-                                                            </span>
-                                                        </div>
-                                                        <p className="text-sm text-slate-600 mb-2">{request.description || 'No description provided'}</p>
-                                                        <div className="flex items-center gap-4 text-sm text-slate-500">
+                                                        <h4 className="font-bold text-lg text-slate-900">{request.userName}</h4>
+                                                        <div className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
+                                                            <span>ID: <span className="font-mono">{request.id?.slice(0, 8)}</span></span>
+                                                            <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
                                                             <span className="flex items-center gap-1">
-                                                                <Clock className="w-4 h-4" />
-                                                                {new Date(request.createdAt.toDate()).toLocaleDateString()}
-                                                            </span>
-                                                            <span className="capitalize px-2 py-1 bg-blue-100 text-blue-700 rounded-md text-xs font-medium">
-                                                                {request.serviceType}
+                                                                <Calendar className="w-3 h-3" />
+                                                                {request.createdAt ? new Date(request.createdAt.toDate()).toLocaleDateString() : 'Date'}
                                                             </span>
                                                         </div>
+                                                    </div>
+
+                                                    <div className="ml-auto md:ml-4">
+                                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${request.urgency === 'emergency' ? 'bg-red-50 text-red-700 border-red-200 animate-pulse' :
+                                                            request.urgency === 'high' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                                                                request.urgency === 'medium' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                                                                    'bg-green-50 text-green-700 border-green-200'
+                                                            }`}>
+                                                            {request.urgency === 'emergency' && <AlertCircle className="w-3 h-3" />}
+                                                            {request.urgency || 'Standard'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="pl-16 mb-4">
+                                                    <p className="text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100 text-sm">
+                                                        {request.description || <span className="italic text-slate-400">No description provided</span>}
+                                                    </p>
+                                                    <div className="flex items-center gap-3 mt-3">
+                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold border border-blue-100">
+                                                            <Wrench className="w-3.5 h-3.5" />
+                                                            {request.serviceType?.toUpperCase()}
+                                                        </span>
+                                                        {request.status === 'in_progress' && (
+                                                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 rounded-lg text-sm font-bold border border-purple-100 animate-pulse">
+                                                                <Clock className="w-3.5 h-3.5" />
+                                                                IN PROGRESS
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex flex-col sm:flex-row items-center gap-3 md:self-center w-full md:w-auto mt-2 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0 border-slate-100 pl-0 md:pl-6 md:border-l md:border-slate-100">
                                                 {activeTab === 'pending' && (
                                                     <>
                                                         <button
-                                                            onClick={() => request.id && handleAcceptRequest(request.id)}
-                                                            className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium"
-                                                        >
-                                                            <CheckCircle className="w-4 h-4" />
-                                                            Accept
-                                                        </button>
-                                                        <button
                                                             onClick={() => request.id && handleRejectRequest(request.id)}
-                                                            className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium"
+                                                            className="w-full sm:w-auto px-5 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all font-bold flex items-center justify-center gap-2 active:scale-[0.98]"
                                                         >
                                                             <XCircle className="w-4 h-4" />
-                                                            Reject
+                                                            Decline
+                                                        </button>
+                                                        <button
+                                                            onClick={() => request.id && handleAcceptRequest(request.id)}
+                                                            className="w-full sm:w-auto px-8 py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all font-bold flex items-center justify-center gap-2 shadow-xl shadow-slate-900/10 hover:-translate-y-0.5 active:scale-[0.98]"
+                                                        >
+                                                            <CheckCircle className="w-4 h-4" />
+                                                            Accept Job
                                                         </button>
                                                     </>
                                                 )}
                                                 {activeTab === 'active' && (
                                                     <button
                                                         onClick={() => request.id && handleCompleteRequest(request.id)}
-                                                        className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
+                                                        className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all font-bold flex items-center justify-center gap-2 shadow-xl shadow-green-500/20 hover:-translate-y-0.5 active:scale-[0.98]"
                                                     >
-                                                        <CheckCircle className="w-4 h-4" />
-                                                        Mark Complete
+                                                        <CheckCircle className="w-5 h-5" />
+                                                        Mark as Complete
                                                     </button>
                                                 )}
                                                 {activeTab === 'completed' && (
-                                                    <div className="flex items-center gap-2 text-green-600">
+                                                    <div className="flex items-center gap-2 px-6 py-3 bg-green-50 text-green-700 rounded-xl border border-green-100">
                                                         <CheckCircle className="w-5 h-5" />
-                                                        <span className="font-medium">Completed</span>
+                                                        <span className="font-bold">Completed</span>
                                                     </div>
                                                 )}
                                             </div>
@@ -723,196 +761,9 @@ export default function MechanicDashboard() {
                         )}
                     </div>
                 </div>
-            </div>
+            </main>
 
-            {/* Workshop Modal */}
-            {showWorkshopModal && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                        <div className="sticky top-0 bg-white border-b border-slate-200 p-6 flex items-center justify-between rounded-t-3xl">
-                            <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-orange-600 rounded-xl flex items-center justify-center">
-                                    <Building className="w-6 h-6 text-white" />
-                                </div>
-                                <div>
-                                    <h2 className="text-2xl font-bold text-slate-900">
-                                        {mechanic ? 'Edit Workshop' : 'Add Workshop'}
-                                    </h2>
-                                    <p className="text-sm text-slate-600">Update your workshop information</p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => setShowWorkshopModal(false)}
-                                className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-100 transition-colors"
-                            >
-                                <X className="w-5 h-5 text-slate-600" />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleWorkshopSubmit} className="p-6 space-y-6">
-                            {/* Personal Information */}
-                            <div className="space-y-4">
-                                <h3 className="text-lg font-semibold text-slate-900">Personal Information</h3>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                                        Your Name *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={workshopForm.name}
-                                        onChange={(e) => setWorkshopForm({ ...workshopForm, name: e.target.value })}
-                                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                                        placeholder="John Doe"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                                        Phone Number *
-                                    </label>
-                                    <input
-                                        type="tel"
-                                        required
-                                        value={workshopForm.phone}
-                                        onChange={(e) => setWorkshopForm({ ...workshopForm, phone: e.target.value })}
-                                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                                        placeholder="+1234567890"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Workshop Information */}
-                            <div className="space-y-4">
-                                <h3 className="text-lg font-semibold text-slate-900">Workshop Information</h3>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                                        Workshop Name *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={workshopForm.workshop_name}
-                                        onChange={(e) => setWorkshopForm({ ...workshopForm, workshop_name: e.target.value })}
-                                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                                        placeholder="ABC Auto Repair"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                                        City *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={workshopForm.city}
-                                        onChange={(e) => setWorkshopForm({ ...workshopForm, city: e.target.value })}
-                                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                                        placeholder="New York"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                                        Workshop Image
-                                    </label>
-                                    {!workshopImagePreview ? (
-                                        <label htmlFor="workshopImageEdit" className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-all duration-300 hover:border-red-400">
-                                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                                <Upload className="w-10 h-10 mb-3 text-slate-400 hover:text-red-500 transition-colors" />
-                                                <p className="mb-2 text-sm text-slate-500">
-                                                    <span className="font-semibold">Click to upload</span> or drag and drop
-                                                </p>
-                                                <p className="text-xs text-slate-400">PNG, JPG or WEBP (MAX. 5MB)</p>
-                                            </div>
-                                            <input
-                                                id="workshopImageEdit"
-                                                type="file"
-                                                accept="image/*"
-                                                onChange={handleWorkshopImageChange}
-                                                className="hidden"
-                                            />
-                                        </label>
-                                    ) : (
-                                        <div className="relative w-full h-40 rounded-xl overflow-hidden border-2 border-red-500">
-                                            <img
-                                                src={workshopImagePreview}
-                                                alt="Workshop Preview"
-                                                className="w-full h-full object-cover"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={removeWorkshopImage}
-                                                className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
-                                            >
-                                                <X className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Services */}
-                            <div className="space-y-4">
-                                <h3 className="text-lg font-semibold text-slate-900">Services Offered</h3>
-                                <div className="grid grid-cols-2 gap-3">
-                                    {['car', 'bike', 'truck', 'emergency', 'towing', 'inspection'].map((service) => (
-                                        <button
-                                            key={service}
-                                            type="button"
-                                            onClick={() => handleServiceToggle(service)}
-                                            className={`px-4 py-3 rounded-xl font-medium transition-all ${workshopForm.services.includes(service)
-                                                ? 'bg-red-500 text-white shadow-lg'
-                                                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                                                }`}
-                                        >
-                                            {service.charAt(0).toUpperCase() + service.slice(1)}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Workshop Status */}
-                            <div className="space-y-4">
-                                <h3 className="text-lg font-semibold text-slate-900">Workshop Status</h3>
-                                <div className="flex items-center gap-3">
-                                    <input
-                                        type="checkbox"
-                                        id="is_open"
-                                        checked={workshopForm.is_open}
-                                        onChange={(e) => setWorkshopForm({ ...workshopForm, is_open: e.target.checked })}
-                                        className="w-5 h-5 text-red-500 border-slate-300 rounded focus:ring-red-500"
-                                    />
-                                    <label htmlFor="is_open" className="text-sm font-medium text-slate-700">
-                                        Workshop is currently open for business
-                                    </label>
-                                </div>
-                            </div>
-
-                            {/* Submit Button */}
-                            <div className="flex gap-3 pt-4 border-t border-slate-200">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowWorkshopModal(false)}
-                                    className="flex-1 px-6 py-3 bg-slate-100 text-slate-700 rounded-xl font-semibold hover:bg-slate-200 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={isSavingWorkshop}
-                                    className="flex-1 px-6 py-3 bg-gradient-to-r from-red-500 to-orange-600 text-white rounded-xl font-semibold hover:from-red-600 hover:to-orange-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {isSavingWorkshop ? 'Saving...' : (mechanic ? 'Update Workshop' : 'Add Workshop')}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            {renderWorkshopModal()}
         </div>
     );
 }
