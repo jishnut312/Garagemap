@@ -122,6 +122,14 @@ export default function SignupPage() {
     }
 
     try {
+      console.log('🔵 Starting signup process...');
+      console.log('📋 Form data:', {
+        userType: formData.userType,
+        email: formData.email,
+        name: formData.name,
+        phone: formData.phone
+      });
+
       const additionalData: any = {
         phone: formData.phone,
         userType: formData.userType,
@@ -130,13 +138,16 @@ export default function SignupPage() {
       if (formData.userType === 'mechanic') {
         additionalData.workshopAddress = formData.workshopAddress;
         additionalData.services = selectedServices;
+        console.log('🔧 Mechanic data:', additionalData);
       }
 
       // 1. Create account (without photo initially to avoid size limits)
+      console.log('📝 Creating account...');
       await signUp(formData.email, formData.password, formData.name, additionalData);
+      console.log('✅ Account created successfully');
 
-      // 2. Upload image if exists
-      if (profileImage && auth.currentUser) {
+      // 2. Upload image if exists (only for mechanics now)
+      if (profileImage && auth.currentUser && formData.userType === 'mechanic') {
         const uid = auth.currentUser.uid;
         const storageRef = ref(storage, `profile_images/${uid}`);
 
@@ -152,17 +163,32 @@ export default function SignupPage() {
             photoURL: photoURL,
             photo: photoURL // Keep legacy field if used elsewhere
           });
-        } catch (uploadError) {
-          console.error("Failed to upload image:", uploadError);
-          // Don't fail the whole signup if image fails, just log it
+          console.log("✅ Profile image uploaded successfully");
+        } catch (uploadError: any) {
+          console.error("⚠️ Failed to upload image:", uploadError);
+          console.warn("Account created successfully, but image upload failed. You can add a profile image later from your dashboard.");
+          // Don't fail the whole signup if image fails
+          // Common causes: CORS not configured, storage rules too restrictive
         }
       }
 
-      // 3. Redirect
-      await handleRedirect();
+      // 3. Wait a moment for Firestore to finish writing
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // 4. Redirect based on userType from form
+      console.log('🚀 Redirecting user...');
+      console.log('👤 User type:', formData.userType);
+
+      if (formData.userType === 'mechanic') {
+        console.log('➡️ Redirecting to /mechanic-home');
+        router.push('/mechanic-home');
+      } else {
+        console.log('➡️ Redirecting to /');
+        router.push('/');
+      }
 
     } catch (err: any) {
-      console.error(err);
+      console.error('❌ Signup error:', err);
       setError(err.message || 'Failed to create account. Please try again.');
     } finally {
       setLoading(false);
@@ -174,12 +200,53 @@ export default function SignupPage() {
     setError('');
 
     try {
+      console.log('🔵 Google Sign-In started...');
+      console.log('📋 Selected user type:', formData.userType);
+
+      // Validate mechanic-specific fields if signing up as mechanic
+      if (formData.userType === 'mechanic') {
+        if (selectedServices.length === 0) {
+          setError('Please select at least one service before signing up with Google');
+          setLoading(false);
+          return;
+        }
+      }
+
       await signInWithGoogle();
-      // Wait a moment for auth state to update, then redirect based on user type
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 500);
-    } catch (err) {
+
+      // Update user document with selected userType and additional data
+      if (auth.currentUser) {
+        const uid = auth.currentUser.uid;
+        const updateData: any = {
+          userType: formData.userType,
+          phone: formData.phone || '',
+        };
+
+        if (formData.userType === 'mechanic') {
+          updateData.workshopAddress = formData.workshopAddress;
+          updateData.services = selectedServices;
+        }
+
+        console.log('📝 Updating user document with:', updateData);
+        await updateDoc(doc(db, 'users', uid), updateData);
+        console.log('✅ User document updated');
+
+        // Wait for Firestore and AuthContext to sync
+        console.log('⏳ Waiting for data to sync...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Use window.location.href for full page reload to ensure AuthContext refreshes
+        console.log('🚀 Redirecting...');
+        if (formData.userType === 'mechanic') {
+          console.log('➡️ Redirecting to /mechanic-home');
+          window.location.href = '/mechanic-home';
+        } else {
+          console.log('➡️ Redirecting to /');
+          window.location.href = '/';
+        }
+      }
+    } catch (err: any) {
+      console.error('❌ Google sign-in error:', err);
       setError('Failed to sign in with Google.');
     } finally {
       setLoading(false);
@@ -400,48 +467,50 @@ export default function SignupPage() {
                 </div>
               )}
 
-              {/* Profile Image Upload - for all users */}
-              <div className="group sm:col-span-2">
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
-                  {formData.userType === 'mechanic' ? 'Workshop/Profile Image' : 'Profile Image'}
-                  <span className="text-gray-400 text-xs ml-2">(Optional)</span>
-                </label>
-                <div className="relative">
-                  {!imagePreview ? (
-                    <label htmlFor="profileImage" className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 group-hover:border-purple-400">
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <Upload className="w-10 h-10 mb-3 text-gray-400 group-hover:text-purple-500 transition-colors" />
-                        <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                          <span className="font-semibold">Click to upload</span> or drag and drop
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG or WEBP (MAX. 5MB)</p>
+              {/* Profile Image Upload - for mechanics only */}
+              {formData.userType === 'mechanic' && (
+                <div className="group sm:col-span-2">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
+                    Workshop/Profile Image
+                    <span className="text-gray-400 text-xs ml-2">(Optional)</span>
+                  </label>
+                  <div className="relative">
+                    {!imagePreview ? (
+                      <label htmlFor="profileImage" className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 group-hover:border-purple-400">
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <Upload className="w-10 h-10 mb-3 text-gray-400 group-hover:text-purple-500 transition-colors" />
+                          <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                            <span className="font-semibold">Click to upload</span> or drag and drop
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG or WEBP (MAX. 5MB)</p>
+                        </div>
+                        <input
+                          id="profileImage"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                          className="hidden"
+                        />
+                      </label>
+                    ) : (
+                      <div className="relative w-full h-40 rounded-xl overflow-hidden border-2 border-purple-500">
+                        <img
+                          src={imagePreview}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={removeImage}
+                          className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
                       </div>
-                      <input
-                        id="profileImage"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageChange}
-                        className="hidden"
-                      />
-                    </label>
-                  ) : (
-                    <div className="relative w-full h-40 rounded-xl overflow-hidden border-2 border-purple-500">
-                      <img
-                        src={imagePreview}
-                        alt="Preview"
-                        className="w-full h-full object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={removeImage}
-                        className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
 
               {/* Services Selection - conditional */}

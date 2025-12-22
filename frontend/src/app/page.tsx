@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
@@ -18,16 +18,110 @@ import {
   Mail
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+// Register GSAP plugins
+if (typeof window !== 'undefined') {
+  gsap.registerPlugin(ScrollTrigger);
+}
 
 export default function Home() {
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
+
+  // Refs for animated elements
+  const heroRef = useRef(null);
+  const statsRef = useRef(null);
+  const featuresRef = useRef(null);
+  const valuePropsRef = useRef(null);
+  const ctaRef = useRef(null);
+
   // Redirect mechanics to their home page, keep customers on home page
   useEffect(() => {
     if (!loading && user && user.userType === 'mechanic') {
       router.push('/mechanic-home');
     }
   }, [user, loading, router]);
+
+  // GSAP Animations
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      // Hero Section Animation
+      const heroTimeline = gsap.timeline({ defaults: { ease: 'power3.out' } });
+
+      heroTimeline
+        .from('.hero-badge', {
+          opacity: 0,
+          y: 20,
+          duration: 0.6,
+        })
+        .from('.hero-title', {
+          opacity: 0,
+          y: 30,
+          duration: 0.8,
+        }, '-=0.3')
+        .from('.hero-description', {
+          opacity: 0,
+          y: 20,
+          duration: 0.6,
+        }, '-=0.4')
+        .from('.hero-buttons', {
+          opacity: 0,
+          y: 20,
+          duration: 0.6,
+        }, '-=0.3')
+        .from('.hero-stat', {
+          opacity: 0,
+          y: 20,
+          stagger: 0.1,
+          duration: 0.5,
+        }, '-=0.2');
+
+      // Feature Cards Animation
+      gsap.from('.feature-card', {
+        scrollTrigger: {
+          trigger: featuresRef.current,
+          start: 'top 80%',
+          toggleActions: 'play none none reverse',
+        },
+        opacity: 0,
+        y: 60,
+        stagger: 0.2,
+        duration: 0.8,
+        ease: 'power3.out',
+      });
+
+      // Value Props Animation
+      gsap.from('.value-prop', {
+        scrollTrigger: {
+          trigger: valuePropsRef.current,
+          start: 'top 75%',
+          toggleActions: 'play none none reverse',
+        },
+        opacity: 0,
+        y: 40,
+        stagger: 0.15,
+        duration: 0.7,
+        ease: 'power2.out',
+      });
+
+      // CTA Section Animation
+      gsap.from('.cta-content', {
+        scrollTrigger: {
+          trigger: ctaRef.current,
+          start: 'top 80%',
+          toggleActions: 'play none none reverse',
+        },
+        opacity: 0,
+        scale: 0.95,
+        duration: 0.8,
+        ease: 'back.out(1.2)',
+      });
+    });
+
+    return () => ctx.revert(); // Cleanup
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans selection:bg-red-500 selection:text-white">
@@ -42,24 +136,24 @@ export default function Home() {
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800/50 border border-slate-700 text-slate-300 text-sm mb-8 backdrop-blur-sm">
+          <div className="hero-badge inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800/50 border border-slate-700 text-slate-300 text-sm mb-8 backdrop-blur-sm">
             <span className="flex h-2 w-2 rounded-full bg-green-500"></span>
             Over 500+ Garages Added This Month
           </div>
 
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-white tracking-tight mb-8 leading-tight">
+          <h1 className="hero-title text-5xl md:text-7xl lg:text-8xl font-black text-white tracking-tight mb-8 leading-tight">
             Find the Right Garage. <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-500">
               Book in Minutes.
             </span>
           </h1>
 
-          <p className="text-xl md:text-2xl text-slate-400 max-w-3xl mx-auto mb-12 font-light leading-relaxed">
+          <p className="hero-description text-xl md:text-2xl text-slate-400 max-w-3xl mx-auto mb-12 font-light leading-relaxed">
             Connect with top-rated mechanics and secure garage spaces instantly.
             Experience automotive care reimagined for the modern era.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="hero-buttons flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href="/map-workshop" className="w-full sm:w-auto px-8 py-4 bg-red-500 hover:bg-red-600 text-white rounded-2xl font-bold text-lg transition-all duration-300 shadow-xl shadow-red-500/20 flex items-center justify-center gap-2 group">
               <Search className="w-5 h-5" />
               Find Workshops
@@ -79,7 +173,7 @@ export default function Home() {
               { label: 'Cities Covered', value: '120+' },
               { label: 'Avg. Rating', value: '4.9/5' },
             ].map((stat, index) => (
-              <div key={index} className="text-center">
+              <div key={index} className="hero-stat text-center">
                 <div className="text-3xl font-bold text-white mb-1">{stat.value}</div>
                 <div className="text-slate-500 text-sm uppercase tracking-wider font-medium">{stat.label}</div>
               </div>
@@ -91,9 +185,9 @@ export default function Home() {
       {/* Main Features Grid */}
       <div className="py-24 bg-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-2 gap-8 -mt-32 relative z-20">
+          <div ref={featuresRef} className="grid md:grid-cols-2 gap-8 -mt-32 relative z-20">
             {/* Feature 1 */}
-            <div className="group bg-white rounded-[2rem] p-10 shadow-2xl shadow-slate-200/50 border border-slate-100 hover:-translate-y-2 transition-all duration-500">
+            <div className="feature-card group bg-white rounded-[2rem] p-10 shadow-2xl shadow-slate-200/50 border border-slate-100 hover:-translate-y-2 transition-all duration-500">
               <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500">
                 <MapPin className="w-8 h-8 text-red-500" />
               </div>
@@ -107,7 +201,7 @@ export default function Home() {
             </div>
 
             {/* Feature 2 */}
-            <div className="group bg-slate-900 rounded-[2rem] p-10 shadow-2xl shadow-slate-900/20 hover:-translate-y-2 transition-all duration-500">
+            <div className="feature-card group bg-slate-900 rounded-[2rem] p-10 shadow-2xl shadow-slate-900/20 hover:-translate-y-2 transition-all duration-500">
               <div className="w-16 h-16 bg-slate-800 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500">
                 <Users className="w-8 h-8 text-white" />
               </div>
@@ -133,7 +227,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-12">
+          <div ref={valuePropsRef} className="grid md:grid-cols-3 gap-12">
             {[
               {
                 icon: <Shield className="w-8 h-8 text-red-500" />,
@@ -151,7 +245,7 @@ export default function Home() {
                 description: "Make informed decisions with genuine user ratings and feedback."
               }
             ].map((feature, i) => (
-              <div key={i} className="text-center space-y-4 p-6 rounded-2xl hover:bg-slate-50 transition-colors duration-300">
+              <div key={i} className="value-prop text-center space-y-4 p-6 rounded-2xl hover:bg-slate-50 transition-colors duration-300">
                 <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
                   {feature.icon}
                 </div>
@@ -166,12 +260,12 @@ export default function Home() {
       {/* CTA Section */}
       <div className="py-24 bg-slate-50">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-slate-900 rounded-[3rem] p-12 md:p-20 text-center relative overflow-hidden">
+          <div ref={ctaRef} className="bg-slate-900 rounded-[3rem] p-12 md:p-20 text-center relative overflow-hidden">
             {/* Decorative blobs */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/20 rounded-full blur-[80px]"></div>
             <div className="absolute bottom-0 left-0 w-64 h-64 bg-orange-500/20 rounded-full blur-[80px]"></div>
 
-            <div className="relative z-10">
+            <div className="cta-content relative z-10">
               <h2 className="text-4xl md:text-5xl font-bold text-white mb-8">
                 Ready to transform your <br /> automotive experience?
               </h2>

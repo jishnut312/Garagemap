@@ -78,7 +78,7 @@ export default function MechanicDashboard() {
                 setMechanic(mechanicData);
 
                 if (mechanicData) {
-                    const requestsData = await getMechanicRequests(mechanicData.id);
+                    const requestsData = await getMechanicRequests(user.uid);
                     setRequests(requestsData);
                 }
             } catch (error) {
@@ -350,7 +350,7 @@ export default function MechanicDashboard() {
                                         required
                                         value={workshopForm.name}
                                         onChange={(e) => setWorkshopForm({ ...workshopForm, name: e.target.value })}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all font-medium"
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all font-medium text-slate-900"
                                         placeholder="John Doe"
                                     />
                                 </div>
@@ -361,7 +361,7 @@ export default function MechanicDashboard() {
                                         required
                                         value={workshopForm.phone}
                                         onChange={(e) => setWorkshopForm({ ...workshopForm, phone: e.target.value })}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all font-medium"
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all font-medium text-slate-900"
                                         placeholder="+1234567890"
                                     />
                                 </div>
@@ -381,7 +381,7 @@ export default function MechanicDashboard() {
                                         required
                                         value={workshopForm.workshop_name}
                                         onChange={(e) => setWorkshopForm({ ...workshopForm, workshop_name: e.target.value })}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all font-medium"
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all font-medium text-slate-900"
                                         placeholder="Awesome Auto Repair"
                                     />
                                 </div>
@@ -392,7 +392,7 @@ export default function MechanicDashboard() {
                                         required
                                         value={workshopForm.city}
                                         onChange={(e) => setWorkshopForm({ ...workshopForm, city: e.target.value })}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all font-medium"
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all font-medium text-slate-900"
                                         placeholder="City, State"
                                     />
                                 </div>
@@ -477,68 +477,73 @@ export default function MechanicDashboard() {
         <div className="min-h-screen bg-slate-50">
             <Navbar />
 
-            <main className="pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
+            <main className="pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
                 {/* Hero Section */}
-                <div className="relative overflow-hidden bg-white rounded-[2rem] shadow-xl border border-slate-100 p-8 mb-8">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-red-50 rounded-full blur-3xl opacity-50 -translate-y-1/2 translate-x-1/4" />
+                <div className="relative overflow-hidden bg-gradient-to-br from-white via-white to-red-50/30 rounded-3xl shadow-2xl border border-slate-200/50 p-8 md:p-10 mb-8">
+                    {/* Decorative elements */}
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-red-100/40 to-orange-100/40 rounded-full blur-3xl opacity-60 -translate-y-1/2 translate-x-1/3" />
+                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-purple-100/30 to-pink-100/30 rounded-full blur-3xl opacity-50 translate-y-1/2 -translate-x-1/3" />
 
-                    <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
-                        <div className="flex items-center gap-6">
-                            <div className="relative">
+                    <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+                        <div className="flex items-start gap-6 flex-1">
+                            <div className="relative flex-shrink-0">
                                 {mechanic?.photo ? (
                                     <img
                                         src={mechanic.photo}
                                         alt={mechanic.workshop_name}
-                                        className="w-24 h-24 rounded-2xl object-cover shadow-lg border-4 border-white"
+                                        className="w-28 h-28 rounded-3xl object-cover shadow-xl border-4 border-white ring-2 ring-slate-200/50"
                                     />
                                 ) : (
-                                    <div className="w-24 h-24 bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl flex items-center justify-center border-4 border-white shadow-lg">
-                                        <Wrench className="w-10 h-10 text-slate-400" />
+                                    <div className="w-28 h-28 bg-gradient-to-br from-slate-100 to-slate-200 rounded-3xl flex items-center justify-center border-4 border-white shadow-xl ring-2 ring-slate-200/50">
+                                        <Wrench className="w-12 h-12 text-slate-400" />
                                     </div>
                                 )}
-                                <div className={`absolute -bottom-2 -right-2 px-3 py-1 rounded-full text-xs font-bold shadow-md border-2 border-white ${mechanic?.is_open ? 'bg-green-500 text-white' : 'bg-slate-800 text-white'}`}>
-                                    {mechanic?.is_open ? 'OPEN' : 'CLOSED'}
+                                <div className={`absolute -bottom-2 -right-2 px-3.5 py-1.5 rounded-full text-xs font-bold shadow-lg border-2 border-white ${mechanic?.is_open ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white' : 'bg-gradient-to-r from-slate-700 to-slate-800 text-white'}`}>
+                                    {mechanic?.is_open ? '● OPEN' : '● CLOSED'}
                                 </div>
                             </div>
-                            <div>
-                                <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{mechanic?.workshop_name}</h1>
-                                <div className="flex items-center gap-2 mt-2 text-slate-600">
-                                    <User className="w-4 h-4" />
-                                    <span className="font-medium">{mechanic?.name}</span>
-                                    <span className="mx-2 text-slate-300">|</span>
-                                    <MapPin className="w-4 h-4" />
-                                    <span>{mechanic?.city || 'No Location'}</span>
-                                </div>
-                                <div className="flex items-center gap-2 mt-1">
-                                    <div className="flex text-yellow-500">
-                                        {[...Array(5)].map((_, i) => (
-                                            <Star key={i} className={`w-4 h-4 ${i < Math.floor(mechanic?.rating || 0) ? 'fill-current' : 'text-slate-200 fill-slate-200'}`} />
-                                        ))}
+                            <div className="flex-1 min-w-0">
+                                <h1 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight mb-3">{mechanic?.workshop_name}</h1>
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-slate-600 mb-3">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center">
+                                            <User className="w-4 h-4 text-slate-600" />
+                                        </div>
+                                        <span className="font-semibold text-slate-900">{mechanic?.name}</span>
                                     </div>
-                                    <span className="text-sm font-medium text-slate-600">
-                                        ({mechanic?.rating.toFixed(1)}) • {mechanic?.reviews_count} reviews
+                                    <span className="text-slate-300">•</span>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 bg-red-50 rounded-lg flex items-center justify-center">
+                                            <MapPin className="w-4 h-4 text-red-500" />
+                                        </div>
+                                        <span className="font-medium">{mechanic?.city || 'No Location'}</span>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-1.5 bg-gradient-to-r from-yellow-50 to-orange-50 px-3 py-2 rounded-xl border border-yellow-200/50">
+                                        <div className="flex">
+                                            {[...Array(5)].map((_, i) => (
+                                                <Star key={i} className={`w-4 h-4 ${i < Math.floor(mechanic?.rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-slate-200 fill-slate-200'}`} />
+                                            ))}
+                                        </div>
+                                        <span className="text-sm font-bold text-slate-900 ml-1">
+                                            {mechanic?.rating.toFixed(1)}
+                                        </span>
+                                    </div>
+                                    <span className="text-sm font-medium text-slate-500">
+                                        {mechanic?.reviews_count} {mechanic?.reviews_count === 1 ? 'review' : 'reviews'}
                                     </span>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 lg:flex-shrink-0">
                             <button
                                 onClick={() => openWorkshopModal(true)}
-                                className="flex items-center gap-2 px-5 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300 transition-all font-bold shadow-sm hover:shadow active:scale-[0.98]"
+                                className="flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-red-600 to-orange-600 text-white rounded-xl hover:from-red-500 hover:to-orange-500 transition-all font-bold shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/30 hover:-translate-y-0.5 active:scale-[0.98]"
                             >
                                 <Edit className="w-4 h-4" />
-                                <span className="hidden sm:inline">Edit Workshop</span>
-                            </button>
-                            <button
-                                onClick={async () => {
-                                    await signOut();
-                                    router.push('/');
-                                }}
-                                className="flex items-center gap-2 px-5 py-3 bg-white border border-red-100 text-red-600 rounded-xl hover:bg-red-50 hover:border-red-200 transition-all font-bold active:scale-[0.98]"
-                            >
-                                <LogOut className="w-4 h-4" />
-                                <span className="hidden sm:inline">Logout</span>
+                                <span>Edit Workshop</span>
                             </button>
                         </div>
                     </div>
