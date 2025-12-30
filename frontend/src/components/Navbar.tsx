@@ -70,7 +70,7 @@ export default function Navbar() {
                             ) : (
                                 <>
                                     <Link href="/" className="text-slate-300 hover:text-white font-medium transition-colors text-sm uppercase tracking-wider">Home</Link>
-                                    <Link href="/dashboard" className="text-slate-300 hover:text-white font-medium transition-colors text-sm uppercase tracking-wider">Garages</Link>
+                                    <Link href="/dashboard" className="text-slate-300 hover:text-white font-medium transition-colors text-sm uppercase tracking-wider">Dashboard</Link>
                                     <Link href="/services" className="text-slate-300 hover:text-white font-medium transition-colors text-sm uppercase tracking-wider">Services</Link>
                                 </>
                             )

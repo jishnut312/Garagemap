@@ -3,14 +3,22 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { getMechanics, type Mechanic, createRequest } from '@/lib/firestore';
-import { Search, MapPin, Phone, Star, Clock, Filter, Wrench, ArrowRight } from 'lucide-react';
+import { getMechanics, type Mechanic, createRequest, getUserRequests, type Request } from '@/lib/firestore';
+import { Search, MapPin, Phone, Star, Clock, Filter, Wrench, ArrowRight, MessageCircle, User, Calendar, CheckCircle, AlertCircle } from 'lucide-react';
+import ChatModal from '@/components/ChatModal';
+import Navbar from '@/components/Navbar';
 
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
   const [mechanics, setMechanics] = useState<Mechanic[]>([]);
   const [filteredMechanics, setFilteredMechanics] = useState<Mechanic[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userRequests, setUserRequests] = useState<Request[]>([]);
+
+  // Chat State
+  const [selectedChatRequest, setSelectedChatRequest] = useState<Request | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedService, setSelectedService] = useState('');
   const [userLocation, setUserLocation] = useState<{ lat: number, lng: number } | null>(null);
@@ -52,16 +60,24 @@ export default function DashboardPage() {
       );
     }
 
-    const fetchMechanics = async () => {
-      // Load mechanics (from Firestore)
+    const fetchMechanicsAndRequests = async () => {
+      setLoading(true);
+      // Load mechanics
       const fetchedMechanics = await getMechanics();
       setMechanics(fetchedMechanics);
       setFilteredMechanics(fetchedMechanics);
+
+      // Load user requests
+      if (user) {
+        const reqs = await getUserRequests(user.uid);
+        setUserRequests(reqs);
+      }
+
       setLoading(false);
     };
 
-    fetchMechanics();
-  }, []);
+    fetchMechanicsAndRequests();
+  }, [user]);
 
   useEffect(() => {
     // Filter mechanics based on search and service type
@@ -117,7 +133,7 @@ export default function DashboardPage() {
     return R * c;
   };
 
-  const handleRequestService = async (mechanicId: string) => {
+  const handleRequestService = async (mechanicId: string, serviceType: string = 'general', urgency: 'low' | 'medium' | 'high' | 'emergency' = 'low') => {
     if (!user) return;
 
     try {
@@ -130,12 +146,13 @@ export default function DashboardPage() {
         mechanicId,
         userName: user.displayName || user.email || 'User',
         mechanicName: mechanic.name,
-        serviceType: 'general', // Could be made dynamic
+        serviceType,
         status: 'pending',
-        description: 'Service request from dashboard',
+        urgency,
+        description: `Service request for ${serviceType} from dashboard`,
       });
 
-      alert('Service request sent successfully!');
+      alert(`Service request (${serviceType}) sent successfully!`);
     } catch (error) {
       console.error('Error creating request:', error);
       alert('Failed to send service request. Please try again.');
@@ -156,35 +173,69 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Navigation */}
-      <nav className="bg-slate-900/95 backdrop-blur-xl border-b border-slate-800 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-red-400 rounded-xl flex items-center justify-center">
-                <span className="text-white font-semibold text-lg">G</span>
-              </div>
-              <span className="text-2xl font-semibold text-red-400 tracking-tight">GarageMap</span>
-            </div>
-            <div className="flex items-center space-x-6">
-              <div className="hidden md:flex items-center space-x-4">
-                <a href="/" className="text-slate-200 hover:text-white font-medium transition-colors">Home</a>
-                <a href="/map-workshop" className="text-slate-200 hover:text-white font-medium transition-colors">Map View</a>
-              </div>
-              <div className="flex items-center gap-3 pl-6 border-l border-slate-700">
-                <div className="text-right hidden sm:block">
-                  <p className="text-sm font-medium text-white">{user?.displayName || 'User'}</p>
-                  <p className="text-xs text-slate-400">Customer</p>
-                </div>
-                <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-orange-600 rounded-full flex items-center justify-center text-white font-semibold shadow-lg">
-                  {user?.displayName?.charAt(0) || 'U'}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        {/* Active Requests Section */}
+        {userRequests.length > 0 && (
+          <div className="mb-10 animate-in slide-in-from-bottom-5 duration-500">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <Clock className="w-5 h-5 text-red-500" />
+                Your Active Requests
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {userRequests.map((req) => (
+                <div key={req.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-all">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="font-bold text-slate-900 line-clamp-1">{req.mechanicName}</h3>
+                      <p className="text-sm text-slate-500 flex items-center gap-1 mt-1">
+                        <span className="w-2 h-2 rounded-full bg-slate-300"></span>
+                        {req.serviceType.toUpperCase()}
+                      </p>
+                    </div>
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${req.status === 'pending' ? 'bg-yellow-50 text-yellow-700 border border-yellow-200' :
+                      req.status === 'accepted' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                        req.status === 'in_progress' ? 'bg-purple-50 text-purple-700 border border-purple-200 animate-pulse' :
+                          req.status === 'completed' ? 'bg-green-50 text-green-700 border border-green-200' :
+                            'bg-slate-100 text-slate-600'
+                      }`}>
+                      {req.status}
+                    </span>
+                  </div>
+
+                  <p className="text-sm text-slate-600 mb-4 line-clamp-2 bg-slate-50 p-3 rounded-xl border border-slate-50">
+                    {req.description || "No description provided."}
+                  </p>
+
+                  <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-100">
+                    <span className="text-xs text-slate-400 font-medium">
+                      {req.createdAt?.toDate().toLocaleDateString()}
+                    </span>
+
+                    {(req.status === 'pending' || req.status === 'accepted' || req.status === 'in_progress') && (
+                      <button
+                        onClick={() => {
+                          setSelectedChatRequest(req);
+                          setIsChatOpen(true);
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/10 active:scale-[0.98]"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                        Chat
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Search and Filters */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
           <div className="flex flex-col md:flex-row gap-4">
@@ -342,9 +393,25 @@ export default function DashboardPage() {
                     >
                       <Phone className="w-4 h-4" />
                     </a>
+
+                    {mechanic.services.includes('emergency') && (
+                      <button
+                        onClick={() => handleRequestService(mechanic.id, 'emergency', 'emergency')}
+                        className="flex items-center gap-1 bg-red-600 text-white px-3 py-2 rounded-xl font-bold text-sm hover:bg-red-700 transition-all shadow-md hover:shadow-lg animate-pulse"
+                        title="Request Emergency Assistance"
+                      >
+                        <AlertCircle className="w-4 h-4" />
+                        SOS
+                      </button>
+                    )}
+
                     <button
-                      onClick={() => handleRequestService(mechanic.id)}
-                      className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-xl font-semibold text-sm hover:bg-red-600 transition-all shadow-md hover:shadow-lg"
+                      onClick={() => handleRequestService(
+                        mechanic.id,
+                        selectedService && selectedService !== 'emergency' ? selectedService : 'general',
+                        'medium'
+                      )}
+                      className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl font-semibold text-sm hover:bg-slate-800 transition-all shadow-md hover:shadow-lg"
                     >
                       Book Now
                       <ArrowRight className="w-4 h-4" />
@@ -374,6 +441,21 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Chat Modal */}
+      {selectedChatRequest && user && (
+        <ChatModal
+          isOpen={isChatOpen}
+          onClose={() => setIsChatOpen(false)}
+          requestId={selectedChatRequest.id || ''}
+          currentUserId={user.uid}
+          otherUserId={selectedChatRequest.mechanicUserId || ''}
+          otherUserName={selectedChatRequest.mechanicName}
+          isMechanic={false}
+          currentUserName={user.displayName || 'User'}
+          mechanicId={selectedChatRequest.mechanicId}
+        />
+      )}
     </div>
   );
 }

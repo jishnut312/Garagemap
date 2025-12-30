@@ -21,6 +21,7 @@ export interface Request {
   id?: string;
   userId: string;
   mechanicId: string;
+  mechanicUserId?: string; // ID of the mechanic's user account for permissions
   userName: string;
   mechanicName: string;
   serviceType: string;
@@ -152,6 +153,18 @@ export const updateRequestStatus = async (requestId: string, status: Request['st
   }
 };
 
+export const updateRequest = async (requestId: string, data: Partial<Request>): Promise<void> => {
+  try {
+    await updateDoc(doc(db, 'requests', requestId), {
+      ...data,
+      updatedAt: Timestamp.now(),
+    });
+  } catch (error) {
+    console.error('Error updating request:', error);
+    throw error;
+  }
+};
+
 // Get mechanic by user ID
 export const getMechanicByUserId = async (userId: string): Promise<Mechanic | null> => {
   try {
@@ -215,3 +228,116 @@ export const updateMechanicProfile = async (
     throw error;
   }
 };
+
+// --- Chat System ---
+
+export interface Message {
+  id?: string;
+  senderId: string;
+  text: string;
+  timestamp: Timestamp;
+  read: boolean;
+}
+
+export interface Chat {
+  id: string;
+  requestId: string;
+  userId: string;
+  mechanicId: string;
+  userName: string;
+  mechanicName: string;
+  lastMessage: string;
+  lastMessageTime: Timestamp;
+  unreadCountUser: number;
+  unreadCountMechanic: number;
+}
+
+import { onSnapshot, orderBy, limit } from 'firebase/firestore';
+
+export const getChatIdForRequest = async (requestId: string): Promise<string | null> => {
+  try {
+    const q = query(collection(db, 'chats'), where('requestId', '==', requestId));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      return querySnapshot.docs[0].id;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error finding chat:', error);
+    return null;
+  }
+};
+
+export const createChat = async (
+  requestId: string,
+  userId: string,
+  mechanicId: string,
+  userName: string,
+  mechanicName: string
+): Promise<string> => {
+  try {
+    // Check if exists first
+    const existingId = await getChatIdForRequest(requestId);
+    if (existingId) return existingId;
+
+    const chatData: Omit<Chat, 'id'> = {
+      requestId,
+      userId,
+      mechanicId,
+      userName,
+      mechanicName,
+      lastMessage: '',
+      lastMessageTime: Timestamp.now(),
+      unreadCountUser: 0,
+      unreadCountMechanic: 0
+    };
+
+    const docRef = await addDoc(collection(db, 'chats'), chatData);
+    return docRef.id;
+  } catch (error) {
+    console.error('Error creating chat:', error);
+    throw error;
+  }
+};
+
+export const sendMessage = async (chatId: string, senderId: string, text: string, isMechanic: boolean) => {
+  try {
+    const now = Timestamp.now();
+    // Add message
+    await addDoc(collection(db, 'chats', chatId, 'messages'), {
+      senderId,
+      text,
+      timestamp: now,
+      read: false
+    });
+
+    // Update parent chat
+    await updateDoc(doc(db, 'chats', chatId), {
+      lastMessage: text,
+      lastMessageTime: now,
+      // Increment unread count for the OTHER party
+      // Note: This matches simple logic. Ideally use atomic increment()
+      // For now, simple update is fine for MVP
+    });
+  } catch (error) {
+    console.error('Error sending message:', error);
+    throw error;
+  }
+};
+
+export const subscribeToMessages = (chatId: string, callback: (messages: Message[]) => void) => {
+  const q = query(
+    collection(db, 'chats', chatId, 'messages'),
+    orderBy('timestamp', 'asc'),
+    limit(100)
+  );
+
+  return onSnapshot(q, (snapshot) => {
+    const messages: Message[] = [];
+    snapshot.forEach((doc) => {
+      messages.push({ id: doc.id, ...doc.data() } as Message);
+    });
+    callback(messages);
+  });
+};
+

@@ -9,6 +9,7 @@ import {
     updateRequestStatus,
     createMechanicProfile,
     updateMechanicProfile,
+    updateRequest,
     type Request,
     type Mechanic
 } from '@/lib/firestore';
@@ -30,9 +31,11 @@ import {
     Upload,
     Calendar,
     ChevronRight,
-    Search
+    Search,
+    MessageCircle
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
+import ChatModal from '@/components/ChatModal';
 
 export default function MechanicDashboard() {
     const { user, loading: authLoading, signOut } = useAuth();
@@ -59,6 +62,10 @@ export default function MechanicDashboard() {
     const [workshopImagePreview, setWorkshopImagePreview] = useState<string>('');
     const router = useRouter();
 
+    // Chat State
+    const [selectedChatRequest, setSelectedChatRequest] = useState<Request | null>(null);
+    const [isChatOpen, setIsChatOpen] = useState(false);
+
     useEffect(() => {
         if (!authLoading && !user) {
             router.push('/login');
@@ -78,8 +85,20 @@ export default function MechanicDashboard() {
                 setMechanic(mechanicData);
 
                 if (mechanicData) {
-                    const requestsData = await getMechanicRequests(user.uid);
+                    const requestsData = await getMechanicRequests(mechanicData.id);
                     setRequests(requestsData);
+
+                    // Migration: Backfill mechanicUserId for requests that miss it
+                    requestsData.forEach(async (req) => {
+                        if (!req.mechanicUserId && user && req.id) {
+                            try {
+                                await updateRequest(req.id, { mechanicUserId: user.uid });
+                                console.log("Migrated request:", req.id);
+                            } catch (err) {
+                                console.error("Migration failed for", req.id, err);
+                            }
+                        }
+                    });
                 }
             } catch (error) {
                 console.error('Error fetching mechanic data:', error);
@@ -725,6 +744,20 @@ export default function MechanicDashboard() {
                                             </div>
 
                                             <div className="flex flex-col sm:flex-row items-center gap-3 md:self-center w-full md:w-auto mt-2 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0 border-slate-100 pl-0 md:pl-6 md:border-l md:border-slate-100">
+                                                {/* Chat Button for Active/Pending Requests */}
+                                                {(activeTab === 'pending' || activeTab === 'active') && (
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedChatRequest(request);
+                                                            setIsChatOpen(true);
+                                                        }}
+                                                        className="w-full sm:w-auto px-4 py-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all font-bold flex items-center justify-center gap-2 active:scale-[0.98]"
+                                                        title="Chat with Customer"
+                                                    >
+                                                        <MessageCircle className="w-5 h-5" />
+                                                        <span className="hidden sm:inline">Chat</span>
+                                                    </button>
+                                                )}
                                                 {activeTab === 'pending' && (
                                                     <>
                                                         <button
@@ -769,6 +802,21 @@ export default function MechanicDashboard() {
             </main>
 
             {renderWorkshopModal()}
+
+            {/* Chat Modal */}
+            {selectedChatRequest && user && mechanic && (
+                <ChatModal
+                    isOpen={isChatOpen}
+                    onClose={() => setIsChatOpen(false)}
+                    requestId={selectedChatRequest.id || ''}
+                    currentUserId={user.uid}
+                    otherUserId={selectedChatRequest.userId}
+                    otherUserName={selectedChatRequest.userName}
+                    isMechanic={true}
+                    currentUserName={mechanic.name}
+                    mechanicId={mechanic.id}
+                />
+            )}
         </div>
     );
 }

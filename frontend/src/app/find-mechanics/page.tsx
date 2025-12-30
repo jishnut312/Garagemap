@@ -89,6 +89,7 @@ export default function FindMechanicsPage() {
             await createRequest({
                 userId: user.uid,
                 mechanicId,
+                mechanicUserId: mechanic.userId,
                 userName: user.displayName || user.email || 'User',
                 mechanicName: mechanic.name,
                 serviceType: 'general',

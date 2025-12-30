@@ -19,10 +19,19 @@ service cloud.firestore {
     // Requests: Users can read/write their own requests
     match /requests/{requestId} {
       allow create: if request.auth != null;
-      allow read, update: if request.auth != null && (
-        resource.data.userId == request.auth.uid || 
-        resource.data.mechanicId == request.auth.uid // Assuming mechanicId is user ID or linked
-      );
+      // Temporary: Allow all authenticated users to read/update requests to enable 
+      // migration of existing data (backfilling mechanicUserId).
+      // TODO: Tighten this back to ownership checks after migration.
+      allow read, update: if request.auth != null;
+    }
+
+    // Chats: Allow authenticated users to read/write for now
+    match /chats/{chatId} {
+      allow read, write: if request.auth != null;
+      
+      match /messages/{messageId} {
+        allow read, write: if request.auth != null;
+      }
     }
   }
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { getMechanicById, createRequest, type Mechanic } from '@/lib/firestore';
 
 interface RequestFormData {
   serviceType: string;
@@ -19,6 +20,7 @@ export default function ServiceRequestPage({ params }: { params: { mechanicId: s
   const { user } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [mechanic, setMechanic] = useState<Mechanic | null>(null);
   const [formData, setFormData] = useState<RequestFormData>({
     serviceType: '',
     description: '',
@@ -30,17 +32,17 @@ export default function ServiceRequestPage({ params }: { params: { mechanicId: s
     },
   });
 
-  // Mock mechanic data
-  const mechanic = {
-    id: parseInt(params.mechanicId),
-    name: 'John Smith',
-    workshop_name: 'Smith Auto Repair',
-    phone: '+1234567890',
-    services: ['car', 'emergency'],
-    rating: 4.5,
-  };
-
   useEffect(() => {
+    const fetchMechanic = async () => {
+      const data = await getMechanicById(params.mechanicId);
+      if (data) {
+        setMechanic(data);
+      } else {
+        console.error('Mechanic not found');
+      }
+    };
+    fetchMechanic();
+
     // Get user's current location
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -59,23 +61,26 @@ export default function ServiceRequestPage({ params }: { params: { mechanicId: s
         }
       );
     }
-  }, []);
+  }, [params.mechanicId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user || !mechanic) return;
     setLoading(true);
 
     try {
-      // Mock API call - replace with actual API
-      console.log('Sending request:', {
-        mechanicId: params.mechanicId,
-        userId: user?.uid,
-        ...formData,
+      await createRequest({
+        userId: user.uid,
+        mechanicId: mechanic.id,
+        mechanicUserId: mechanic.userId,
+        userName: user.displayName || user.email || 'User',
+        mechanicName: mechanic.workshop_name || mechanic.name,
+        serviceType: formData.serviceType,
+        status: 'pending',
+        urgency: formData.urgency as 'low' | 'medium' | 'high',
+        description: formData.description,
       });
 
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
       alert('Service request sent successfully!');
       router.push('/dashboard');
     } catch (error) {
@@ -106,6 +111,17 @@ export default function ServiceRequestPage({ params }: { params: { mechanicId: s
           >
             Log In
           </a>
+        </div>
+      </div>
+    );
+  }
+
+  if (!mechanic) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Loading mechanic details...</h2>
+          <p className="text-gray-600">If this takes too long, the mechanic might not exist.</p>
         </div>
       </div>
     );
@@ -172,7 +188,7 @@ export default function ServiceRequestPage({ params }: { params: { mechanicId: s
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">Select a service</option>
-                {mechanic.services.map((service) => (
+                {mechanic.services && mechanic.services.map((service) => (
                   <option key={service} value={service}>
                     {service.charAt(0).toUpperCase() + service.slice(1)} Service
                   </option>

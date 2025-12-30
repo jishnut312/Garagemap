@@ -37,10 +37,14 @@ export default function Home() {
   const valuePropsRef = useRef(null);
   const ctaRef = useRef(null);
 
-  // Redirect mechanics to their home page, keep customers on home page
+  // Redirect users to their respective dashboards
   useEffect(() => {
-    if (!loading && user && user.userType === 'mechanic') {
-      router.push('/mechanic-home');
+    if (!loading && user) {
+      if (user.userType === 'mechanic') {
+        router.push('/mechanic-home');
+      } else {
+        router.push('/dashboard');
+      }
     }
   }, [user, loading, router]);
 
