@@ -6,11 +6,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
 import {
-    getMechanicByUserId,
-    updateMechanicProfile,
-    createMechanicProfile,
-    type Mechanic
-} from '@/lib/firestore';
+    getMyWorkshop,
+    updateWorkshop,
+    createWorkshop,
+    type Workshop
+} from '@/lib/django-api';
 import {
     User,
     MapPin,
@@ -34,7 +34,7 @@ export default function MechanicProfilePage() {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [mechanic, setMechanic] = useState<Mechanic | null>(null);
+    const [mechanic, setMechanic] = useState<Workshop | null>(null);
     const [successMessage, setSuccessMessage] = useState('');
     const [activeSection, setActiveSection] = useState<'details' | 'services' | 'account'>('details');
 
@@ -72,11 +72,12 @@ export default function MechanicProfilePage() {
 
     const loadMechanicData = async (uid: string) => {
         try {
-            const data = await getMechanicByUserId(uid);
+            // Note: getMyWorkshop relies on the auth token, not the passed uid
+            const data = await getMyWorkshop();
             setMechanic(data);
             if (data) {
                 setFormData({
-                    name: data.name || '',
+                    name: data.mechanic_name || '',
                     phone: data.phone || '',
                     workshop_name: data.workshop_name || '',
                     city: data.city || '',
@@ -91,17 +92,16 @@ export default function MechanicProfilePage() {
                 if (data.photo) {
                     setImagePreview(data.photo);
                 }
-            } else {
-                // Initialize with user data if available
-                setFormData(prev => ({
-                    ...prev,
-                    name: user?.displayName || '',
-                    // Default open
-                    is_open: true
-                }));
             }
         } catch (error) {
-            console.error('Error loading profile:', error);
+            console.log('No existing profile found or error loading:', error);
+            // Initialize with user data if available
+            setFormData(prev => ({
+                ...prev,
+                name: user?.displayName || '',
+                // Default open
+                is_open: true
+            }));
         } finally {
             setLoading(false);
         }
@@ -180,15 +180,21 @@ export default function MechanicProfilePage() {
             }
 
             const dataToSave = {
-                ...formData,
+                mechanic_name: formData.name,
+                workshop_name: formData.workshop_name,
+                phone: formData.phone,
+                city: formData.city,
                 latitude: lat,
-                longitude: lon
+                longitude: lon,
+                services: formData.services,
+                is_open: formData.is_open,
+                photo: formData.photo
             };
 
             if (mechanic) {
-                await updateMechanicProfile(mechanic.id, dataToSave);
-            } else if (user) {
-                await createMechanicProfile(user.uid, dataToSave);
+                await updateWorkshop(mechanic.id, dataToSave);
+            } else {
+                await createWorkshop(dataToSave);
             }
 
             // Refresh local data
@@ -494,7 +500,7 @@ export default function MechanicProfilePage() {
                                             is_open: formData.is_open,
                                             photo: formData.photo
                                         }) === JSON.stringify({
-                                            name: mechanic.name || '',
+                                            name: mechanic.mechanic_name || '',
                                             phone: mechanic.phone || '',
                                             workshop_name: mechanic.workshop_name || '',
                                             city: mechanic.city || '',

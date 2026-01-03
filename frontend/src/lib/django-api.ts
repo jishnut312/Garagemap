@@ -34,13 +34,14 @@ async function apiRequest(
 ): Promise<any> {
     const token = await getAuthToken();
 
-    const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        ...options.headers,
-    };
+    const headers = new Headers(options.headers);
+
+    if (!headers.has('Content-Type')) {
+        headers.set('Content-Type', 'application/json');
+    }
 
     if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+        headers.set('Authorization', `Bearer ${token}`);
     }
 
     const response = await fetch(`${DJANGO_API_URL}${endpoint}`, {
@@ -56,15 +57,32 @@ async function apiRequest(
     return response.json();
 }
 
+// Types
+export interface Workshop {
+    id: number;
+    mechanic_name: string;
+    workshop_name: string;
+    description?: string;
+    phone: string;
+    latitude: number;
+    longitude: number;
+    services: string[];
+    photo?: string;
+    is_open: boolean;
+    rating?: number;
+    reviews_count?: number;
+    city?: string;
+}
+
 // ============================================
 // Workshop API Functions
 // ============================================
 
-export async function getWorkshops() {
+export async function getWorkshops(): Promise<Workshop[]> {
     return apiRequest('/workshops/');
 }
 
-export async function getMyWorkshop() {
+export async function getMyWorkshop(): Promise<Workshop> {
     return apiRequest('/workshops/my_workshop/');
 }
 
@@ -77,7 +95,9 @@ export async function createWorkshop(data: {
     longitude: number;
     services: string[];
     photo?: string;
-}) {
+    is_open?: boolean;
+    city?: string;
+}): Promise<Workshop> {
     return apiRequest('/workshops/', {
         method: 'POST',
         body: JSON.stringify(data),

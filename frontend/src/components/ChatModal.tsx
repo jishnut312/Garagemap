@@ -69,8 +69,34 @@ export default function ChatModal({
 
                 setChatId(id);
 
+                // Load from Local Storage first
+                try {
+                    const saved = localStorage.getItem(`chat_${id}`);
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        // Reconstruct timestamps
+                        const revivedMessages = parsed.map((m: any) => ({
+                            ...m,
+                            timestamp: m.timestamp && m.timestamp.seconds
+                                ? new Timestamp(m.timestamp.seconds, m.timestamp.nanoseconds)
+                                : m.timestamp ? new Timestamp(m.timestamp.seconds, m.timestamp.nanoseconds) : null
+                        }));
+                        setMessages(revivedMessages);
+                        if (revivedMessages.length > 0) setLoading(false);
+                    }
+                } catch (e) {
+                    console.error("Failed to load from localStorage", e);
+                }
+
                 unsubscribe = subscribeToMessages(id, (msgs) => {
                     setMessages(msgs);
+                    // Save to Local Storage
+                    try {
+                        localStorage.setItem(`chat_${id}`, JSON.stringify(msgs));
+                    } catch (e) {
+                        console.error("Failed to save to localStorage", e);
+                    }
+
                     setLoading(false);
                     scrollToBottom();
                 });
@@ -152,8 +178,8 @@ export default function ChatModal({
                             return (
                                 <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                                     <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${isMe
-                                            ? 'bg-red-500 text-white rounded-br-none'
-                                            : 'bg-white text-slate-700 border border-slate-200 rounded-bl-none'
+                                        ? 'bg-red-500 text-white rounded-br-none'
+                                        : 'bg-white text-slate-700 border border-slate-200 rounded-bl-none'
                                         }`}>
                                         <p>{msg.text}</p>
                                         <div className={`text-[10px] mt-1 opacity-70 ${isMe ? 'text-red-100' : 'text-slate-400'}`}>
