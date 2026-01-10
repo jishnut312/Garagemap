@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Bot, User, Sparkles } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, User, Headphones } from 'lucide-react';
 
 interface Message {
     role: 'user' | 'assistant';
@@ -9,12 +9,22 @@ interface Message {
     timestamp: Date;
 }
 
-export default function AIChatWidget() {
+interface AIChatWidgetProps {
+    showTrigger?: 'idle' | 'no-results' | 'always';
+    idleTimeMs?: number;
+}
+
+export default function AIChatWidget({
+    showTrigger = 'always',
+    idleTimeMs = 8000
+}: AIChatWidgetProps) {
     const [isOpen, setIsOpen] = useState(false);
+    const [isVisible, setIsVisible] = useState(showTrigger === 'always');
+    const [isDismissed, setIsDismissed] = useState(false);
     const [messages, setMessages] = useState<Message[]>([
         {
             role: 'assistant',
-            content: "👋 Hi! I'm your GarageMap AI Assistant. I can help you with car issues, find mechanics, or answer questions about our platform. What can I help you with today?",
+            content: "Hello. I'm here to help with your vehicle concerns. What issue are you experiencing?",
             timestamp: new Date(),
         },
     ]);
@@ -22,6 +32,7 @@ export default function AIChatWidget() {
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+    const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     // Auto-scroll to bottom when new messages arrive
     useEffect(() => {
@@ -34,6 +45,43 @@ export default function AIChatWidget() {
             inputRef.current?.focus();
         }
     }, [isOpen]);
+
+    // Idle detection logic
+    useEffect(() => {
+        if (showTrigger === 'idle' && !isDismissed) {
+            const resetTimer = () => {
+                if (idleTimerRef.current) {
+                    clearTimeout(idleTimerRef.current);
+                }
+                idleTimerRef.current = setTimeout(() => {
+                    setIsVisible(true);
+                }, idleTimeMs);
+            };
+
+            const events = ['mousemove', 'keydown', 'scroll', 'click'];
+            events.forEach(event => {
+                window.addEventListener(event, resetTimer);
+            });
+
+            resetTimer();
+
+            return () => {
+                events.forEach(event => {
+                    window.removeEventListener(event, resetTimer);
+                });
+                if (idleTimerRef.current) {
+                    clearTimeout(idleTimerRef.current);
+                }
+            };
+        }
+    }, [showTrigger, isDismissed, idleTimeMs]);
+
+    // Show on no results
+    useEffect(() => {
+        if (showTrigger === 'no-results' && !isDismissed) {
+            setIsVisible(true);
+        }
+    }, [showTrigger, isDismissed]);
 
     const sendMessage = async () => {
         if (!inputMessage.trim() || isLoading) return;
@@ -49,7 +97,6 @@ export default function AIChatWidget() {
         setIsLoading(true);
 
         try {
-            // Call Django backend AI endpoint
             const response = await fetch('http://localhost:8000/api/chatbot/', {
                 method: 'POST',
                 headers: {
@@ -80,7 +127,7 @@ export default function AIChatWidget() {
             console.error('Chat error:', error);
             const errorMessage: Message = {
                 role: 'assistant',
-                content: "I'm sorry, I'm having trouble connecting right now. Please try again or contact support.",
+                content: "I apologize, but I'm unable to connect right now. Please try calling a mechanic directly or use our search feature.",
                 timestamp: new Date(),
             };
             setMessages((prev) => [...prev, errorMessage]);
@@ -96,40 +143,62 @@ export default function AIChatWidget() {
         }
     };
 
+    const handleDismiss = () => {
+        setIsOpen(false);
+        setIsVisible(false);
+        setIsDismissed(true);
+        sessionStorage.setItem('chatbot-dismissed', 'true');
+    };
+
+    // Check if dismissed in this session
+    useEffect(() => {
+        const dismissed = sessionStorage.getItem('chatbot-dismissed');
+        if (dismissed === 'true') {
+            setIsDismissed(true);
+            setIsVisible(false);
+        }
+    }, []);
+
+    if (!isVisible || isDismissed) return null;
+
     return (
         <>
             {/* Floating Chat Button */}
             {!isOpen && (
                 <button
                     onClick={() => setIsOpen(true)}
-                    className="fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-br from-purple-600 to-blue-600 text-white rounded-full shadow-2xl hover:shadow-purple-500/50 hover:scale-110 transition-all duration-300 flex items-center justify-center z-50 group animate-bounce"
-                    aria-label="Open AI Chat"
+                    className="fixed bottom-6 right-6 w-14 h-14 bg-slate-800 hover:bg-slate-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-50 group"
+                    aria-label="Open Support Chat"
+                    style={{ animation: 'fadeIn 0.3s ease-in' }}
                 >
-                    <Sparkles className="w-7 h-7 group-hover:rotate-12 transition-transform" />
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full animate-pulse"></span>
+                    <Headphones className="w-6 h-6" />
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full"></span>
                 </button>
             )}
 
             {/* Chat Window */}
             {isOpen && (
-                <div className="fixed bottom-6 right-6 w-96 h-[600px] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col z-50 animate-in slide-in-from-bottom-5 duration-300">
+                <div
+                    className="fixed bottom-6 right-6 w-96 h-[600px] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col z-50"
+                    style={{ animation: 'fadeIn 0.2s ease-in' }}
+                >
                     {/* Header */}
-                    <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white p-5 rounded-t-3xl flex items-center justify-between">
+                    <div className="bg-slate-800 text-white p-4 rounded-t-2xl flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
-                                <Bot className="w-6 h-6" />
+                            <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center">
+                                <Headphones className="w-5 h-5" />
                             </div>
                             <div>
-                                <h3 className="font-bold text-lg">AI Assistant</h3>
-                                <p className="text-xs text-purple-100 flex items-center gap-1">
-                                    <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                                    Online
+                                <h3 className="font-semibold text-sm">Vehicle Support</h3>
+                                <p className="text-xs text-slate-300 flex items-center gap-1">
+                                    <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                                    Available
                                 </p>
                             </div>
                         </div>
                         <button
-                            onClick={() => setIsOpen(false)}
-                            className="w-8 h-8 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
+                            onClick={handleDismiss}
+                            className="w-8 h-8 hover:bg-slate-700 rounded-lg flex items-center justify-center transition-colors"
                             aria-label="Close chat"
                         >
                             <X className="w-5 h-5" />
@@ -146,8 +215,8 @@ export default function AIChatWidget() {
                                 {/* Avatar */}
                                 <div
                                     className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${msg.role === 'user'
-                                            ? 'bg-slate-900 text-white'
-                                            : 'bg-gradient-to-br from-purple-500 to-blue-500 text-white'
+                                        ? 'bg-slate-700 text-white'
+                                        : 'bg-orange-100 text-orange-600'
                                         }`}
                                 >
                                     {msg.role === 'user' ? (
@@ -159,16 +228,13 @@ export default function AIChatWidget() {
 
                                 {/* Message Bubble */}
                                 <div
-                                    className={`max-w-[75%] rounded-2xl px-4 py-3 ${msg.role === 'user'
-                                            ? 'bg-slate-900 text-white rounded-tr-sm'
-                                            : 'bg-white text-slate-800 border border-slate-200 rounded-tl-sm shadow-sm'
+                                    className={`max-w-[75%] rounded-xl px-4 py-3 ${msg.role === 'user'
+                                        ? 'bg-slate-700 text-white'
+                                        : 'bg-white text-slate-800 border border-slate-200 shadow-sm'
                                         }`}
                                 >
                                     <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-                                    <p
-                                        className={`text-xs mt-1 ${msg.role === 'user' ? 'text-slate-400' : 'text-slate-400'
-                                            }`}
-                                    >
+                                    <p className="text-xs mt-1 opacity-60">
                                         {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </p>
                                 </div>
@@ -178,14 +244,14 @@ export default function AIChatWidget() {
                         {/* Loading Indicator */}
                         {isLoading && (
                             <div className="flex gap-3">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 text-white flex items-center justify-center">
+                                <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center">
                                     <Bot className="w-4 h-4" />
                                 </div>
-                                <div className="bg-white border border-slate-200 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
+                                <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm">
                                     <div className="flex gap-1">
                                         <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></span>
-                                        <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
-                                        <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                                        <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                                        <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
                                     </div>
                                 </div>
                             </div>
@@ -195,7 +261,7 @@ export default function AIChatWidget() {
                     </div>
 
                     {/* Input */}
-                    <div className="p-4 border-t border-slate-200 bg-white rounded-b-3xl">
+                    <div className="p-4 border-t border-slate-200 bg-white rounded-b-2xl">
                         <div className="flex gap-2">
                             <input
                                 ref={inputRef}
@@ -203,25 +269,38 @@ export default function AIChatWidget() {
                                 value={inputMessage}
                                 onChange={(e) => setInputMessage(e.target.value)}
                                 onKeyPress={handleKeyPress}
-                                placeholder="Ask me anything..."
+                                placeholder="Describe your vehicle issue..."
                                 disabled={isLoading}
-                                className="flex-1 px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm disabled:bg-slate-50 disabled:text-slate-400"
+                                className="flex-1 px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm text-slate-900 placeholder:text-slate-400 disabled:bg-slate-50 disabled:text-slate-800"
                             />
                             <button
                                 onClick={sendMessage}
                                 disabled={!inputMessage.trim() || isLoading}
-                                className="w-12 h-12 bg-gradient-to-br from-purple-600 to-blue-600 text-white rounded-xl hover:shadow-lg hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center"
+                                className="w-12 h-12 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                                 aria-label="Send message"
                             >
                                 <Send className="w-5 h-5" />
                             </button>
                         </div>
                         <p className="text-xs text-slate-400 mt-2 text-center">
-                            Powered by Google Gemini AI ✨
+                            AI-powered assistance • Responses may vary
                         </p>
                     </div>
                 </div>
             )}
+
+            <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
         </>
     );
 }

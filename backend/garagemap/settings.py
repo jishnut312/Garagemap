@@ -147,7 +147,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Only allow requests from your frontend domains
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:3000,https://localhost:3000'
+    default='https://garagemap-8wrl.vercel.app/'
 ).split(',')
 
 CORS_ALLOW_CREDENTIALS = True

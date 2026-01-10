@@ -18,6 +18,7 @@ import {
   Mail
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
+import AIChatWidget from '@/components/AIChatWidget';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -37,16 +38,9 @@ export default function Home() {
   const valuePropsRef = useRef(null);
   const ctaRef = useRef(null);
 
-  // Redirect users to their respective dashboards
-  useEffect(() => {
-    if (!loading && user) {
-      if (user.userType === 'mechanic') {
-        router.push('/mechanic-home');
-      } else {
-        router.push('/dashboard');
-      }
-    }
-  }, [user, loading, router]);
+  // Redirect logic removed to allow logged-in users to view landing page
+  // Users can access dashboard via Navbar
+
 
   // GSAP Animations
   useEffect(() => {
@@ -333,6 +327,7 @@ export default function Home() {
           </div>
         </div>
       </footer>
+      <AIChatWidget showTrigger="idle" idleTimeMs={8000} />
     </div>
   );
 }

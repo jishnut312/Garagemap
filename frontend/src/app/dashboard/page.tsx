@@ -459,9 +459,8 @@ export default function DashboardPage() {
         />
       )}
 
-      {/* AI Chat Widget */}
-      <AIChatWidget />
+      {/* AI Chat Widget - Shows when no results */}
+      <AIChatWidget showTrigger={filteredMechanics.length === 0 ? 'no-results' : 'always'} />
     </div>
   );
 }
-
