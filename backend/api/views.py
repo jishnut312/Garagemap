@@ -1,8 +1,11 @@
 from rest_framework import viewsets, permissions, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from django.db.models import Q
 from django.contrib.auth.models import User
+from django.conf import settings
+from decouple import config
+import google.generativeai as genai
 from .models import UserProfile, Workshop, ServiceRequest, Review
 from .serializers import (
     UserSerializer, UserProfileSerializer, WorkshopSerializer,
@@ -131,3 +134,106 @@ class MechanicViewSet(viewsets.ReadOnlyModelViewSet):
             except ValueError:
                 pass
         return queryset
+
+
+# Configure Gemini AI
+GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def ai_chatbot(request):
+    """
+    AI-powered chatbot for customer assistance using Google Gemini.
+    Helps customers with car issues, mechanic recommendations, and platform navigation.
+    """
+    try:
+        user_message = request.data.get('message', '')
+        conversation_history = request.data.get('history', [])
+        
+        if not user_message:
+            return Response(
+                {'error': 'Message is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not GEMINI_API_KEY:
+            return Response(
+                {'error': 'AI service is not configured. Please contact support.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        
+        # System context for the chatbot
+        system_context = """You are GarageMap AI Assistant, a helpful and friendly chatbot for GarageMap - a platform connecting customers with mechanics and auto repair workshops.
+
+Your role:
+- Help customers understand car problems and suggest possible issues
+- Recommend appropriate services (oil change, brake repair, AC service, tire replacement, etc.)
+- Guide users on how to find and book mechanics
+- Answer questions about the platform
+- Provide estimated urgency levels for car issues
+
+Key services available on GarageMap:
+- Car Service (general maintenance)
+- Bike Service
+- Truck Service
+- Emergency Roadside Assistance
+- Towing
+- Brake Repair
+- Engine Diagnostics
+- AC Repair
+- Tire Services
+- Oil Change
+- Battery Replacement
+
+Guidelines:
+1. Be concise and helpful (2-4 sentences max)
+2. If describing a car problem, suggest likely causes and urgency (low/medium/high/emergency)
+3. Always encourage users to book a mechanic for proper diagnosis
+4. Be friendly and professional
+5. If unsure, admit it and suggest contacting a mechanic directly
+
+Example interactions:
+User: "My car makes a grinding noise when I brake"
+You: "That grinding noise is likely worn brake pads or damaged rotors - this is a high-priority safety issue! I recommend booking a brake specialist immediately through our dashboard. Would you like help finding mechanics who specialize in brake repairs?"
+
+User: "How do I book a mechanic?"
+You: "It's easy! Go to your dashboard, browse available mechanics, filter by service type, and click 'Book Now' on your preferred workshop. You can also call them directly or request emergency assistance if needed."
+"""
+        
+        # Initialize Gemini model
+        model = genai.GenerativeModel('gemini-pro')
+        
+        # Build conversation with context
+        chat_messages = [system_context]
+        
+        # Add conversation history
+        for msg in conversation_history[-10:]:  # Keep last 10 messages for context
+            role = msg.get('role', 'user')
+            content = msg.get('content', '')
+            if role == 'user':
+                chat_messages.append(f"User: {content}")
+            else:
+                chat_messages.append(f"Assistant: {content}")
+        
+        # Add current message
+        chat_messages.append(f"User: {user_message}")
+        
+        # Generate response
+        full_prompt = "\n\n".join(chat_messages)
+        response = model.generate_content(full_prompt)
+        
+        ai_response = response.text
+        
+        return Response({
+            'message': ai_response,
+            'success': True
+        })
+        
+    except Exception as e:
+        return Response(
+            {'error': f'AI service error: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

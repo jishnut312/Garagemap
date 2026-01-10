@@ -7,6 +7,8 @@ import { getMechanics, type Mechanic, createRequest, getUserRequests, type Reque
 import { Search, MapPin, Phone, Star, Clock, Filter, Wrench, ArrowRight, MessageCircle, User, Calendar, CheckCircle, AlertCircle } from 'lucide-react';
 import ChatModal from '@/components/ChatModal';
 import Navbar from '@/components/Navbar';
+import AIChatWidget from '@/components/AIChatWidget';
+
 
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
@@ -456,6 +458,10 @@ export default function DashboardPage() {
           mechanicId={selectedChatRequest.mechanicId}
         />
       )}
+
+      {/* AI Chat Widget */}
+      <AIChatWidget />
     </div>
   );
 }
+
