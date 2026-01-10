@@ -101,37 +101,88 @@ export default function MapWorkshop() {
       return 0;
     });
 
-  const handleUseLocation = () => {
+  const handleUseLocation = async () => {
     console.log("Requesting location...");
-    if (navigator.geolocation) {
-      setIsLocating(true);
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          console.log("Location received:", position.coords);
-          const userPos = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          };
-          setUserPos(userPos);
-          setUserLocation(`${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`);
-          setSortBy('distance'); // Auto-switch to distance sort
-          setIsLocating(false);
-        },
-        (error) => {
-          console.error("Location error:", error);
-          let errorMessage = 'Unable to get your location.';
-          if (error.code === 1) errorMessage = 'Location permission denied. Please enable it in your browser settings.';
-          else if (error.code === 2) errorMessage = 'Location unavailable.';
-          else if (error.code === 3) errorMessage = 'Location request timed out.';
 
-          alert(errorMessage);
-          setIsLocating(false);
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
-    } else {
-      alert('Geolocation is not supported by this browser.');
+    // Check if geolocation is supported
+    if (!navigator.geolocation) {
+      alert('❌ Geolocation is not supported by this browser.\n\nPlease use a modern browser like Chrome, Firefox, or Edge.');
+      return;
     }
+
+    // Check permission state first
+    try {
+      const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
+      console.log("Permission state:", permissionStatus.state);
+
+      if (permissionStatus.state === 'denied') {
+        alert('🚫 Location Access Blocked\n\nYou have previously denied location access. To enable it:\n\n1. Click the lock icon (🔒) in your browser address bar\n2. Find "Location" permissions\n3. Change it to "Allow"\n4. Refresh the page and try again');
+        return;
+      }
+    } catch (e) {
+      console.warn("Permission API not supported, continuing with geolocation request");
+    }
+
+    setIsLocating(true);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        console.log("✅ Location received:", position.coords);
+        const userPos = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+        setUserPos(userPos);
+        setUserLocation(`${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`);
+        setSortBy('distance'); // Auto-switch to distance sort
+        setIsLocating(false);
+
+        // Show success message
+        const successDiv = document.createElement('div');
+        successDiv.className = 'fixed top-24 right-6 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
+        successDiv.innerHTML = '✅ Location detected successfully!';
+        document.body.appendChild(successDiv);
+        setTimeout(() => successDiv.remove(), 3000);
+      },
+      (error) => {
+        console.error("❌ Location error:", error);
+        console.error("Error code:", error.code);
+        console.error("Error message:", error.message);
+
+        let errorTitle = 'Unable to Get Location';
+        let errorMessage = '';
+        let suggestions = '';
+
+        switch (error.code) {
+          case 1: // PERMISSION_DENIED
+            errorTitle = '🚫 Location Permission Denied';
+            errorMessage = 'You denied the location request.';
+            suggestions = 'To fix this:\n\n1. Click the lock icon (🔒) in your address bar\n2. Set Location to "Allow"\n3. Refresh the page and try again\n\nOR\n\nCheck your browser settings:\n- Chrome: Settings → Privacy → Site Settings → Location\n- Firefox: Settings → Privacy → Permissions → Location\n- Edge: Settings → Cookies and site permissions → Location';
+            break;
+          case 2: // POSITION_UNAVAILABLE
+            errorTitle = '📍 Location Unavailable';
+            errorMessage = 'Your device cannot determine your location.';
+            suggestions = 'Try:\n- Enabling Location Services in Windows Settings\n- Connecting to WiFi for better accuracy\n- Restarting your browser';
+            break;
+          case 3: // TIMEOUT
+            errorTitle = '⏱️ Location Request Timed Out';
+            errorMessage = 'The request took too long.';
+            suggestions = 'Try:\n- Checking your internet connection\n- Clicking the button again\n- Restarting your browser';
+            break;
+          default:
+            errorMessage = 'An unknown error occurred.';
+            suggestions = 'Try refreshing the page or using a different browser.';
+        }
+
+        alert(`${errorTitle}\n\n${errorMessage}\n\n${suggestions}`);
+        setIsLocating(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000, // Increased timeout
+        maximumAge: 0
+      }
+    );
   };
 
   return (
