@@ -15,7 +15,13 @@ import {
   Users,
   Car,
   Phone,
-  Mail
+  Mail,
+  Zap,
+  ShieldCheck,
+  Twitter,
+  Github,
+  Linkedin,
+  Instagram
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import AIChatWidget from '@/components/AIChatWidget';
@@ -134,10 +140,7 @@ export default function Home() {
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="hero-badge inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800/50 border border-slate-700 text-slate-300 text-sm mb-8 backdrop-blur-sm">
-            <span className="flex h-2 w-2 rounded-full bg-green-500"></span>
-            Over 500+ Garages Added This Month
-          </div>
+
 
           <h1 className="hero-title text-5xl md:text-7xl lg:text-8xl font-black text-white tracking-tight mb-8 leading-tight">
             Find the Right Garage. <br />
@@ -164,16 +167,33 @@ export default function Home() {
           </div>
 
           {/* Stats */}
-          <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-8 border-t border-slate-800 pt-12">
+          {/* Features Grid */}
+          <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-6 border-t border-slate-800 pt-12">
             {[
-              { label: 'Active Users', value: '10k+' },
-              { label: 'Verified Garages', value: '2.5k+' },
-              { label: 'Cities Covered', value: '120+' },
-              { label: 'Avg. Rating', value: '4.9/5' },
-            ].map((stat, index) => (
-              <div key={index} className="hero-stat text-center">
-                <div className="text-3xl font-bold text-white mb-1">{stat.value}</div>
-                <div className="text-slate-500 text-sm uppercase tracking-wider font-medium">{stat.label}</div>
+              {
+                icon: <ShieldCheck className="w-8 h-8 text-red-500 mb-3 mx-auto" />,
+                title: 'Secure Authentication'
+              },
+              {
+                icon: <MapPin className="w-8 h-8 text-red-500 mb-3 mx-auto" />,
+                title: 'Location-Based Search'
+              },
+              {
+                icon: <Star className="w-8 h-8 text-red-500 mb-3 mx-auto" />,
+                title: 'Ratings & Reviews System'
+              },
+              {
+                icon: <Zap className="w-8 h-8 text-red-500 mb-3 mx-auto" />,
+                title: 'Real-time Workshop Discovery'
+              },
+            ].map((feature, index) => (
+              <div key={index} className="hero-stat text-center p-4 rounded-2xl hover:bg-white/5 transition-colors duration-300 group cursor-default">
+                <div className="transform group-hover:scale-110 transition-transform duration-300">
+                  {feature.icon}
+                </div>
+                <div className="font-bold text-white text-base md:text-lg leading-tight">
+                  {feature.title}
+                </div>
               </div>
             ))}
           </div>
@@ -267,62 +287,82 @@ export default function Home() {
               <h2 className="text-4xl md:text-5xl font-bold text-white mb-8">
                 Ready to transform your <br /> automotive experience?
               </h2>
-              <p className="text-xl text-slate-400 mb-10 max-w-2xl mx-auto">
+              <p className="text-xl text-slate-400 max-w-2xl mx-auto">
                 Join thousands of satisfied car owners and mechanics on the fastest growing garage network.
               </p>
-              <div className="flex flex-col sm:flex-row justify-center gap-4">
-                <Link href="/signup" className="px-8 py-4 bg-white text-slate-900 rounded-xl font-bold text-lg hover:bg-slate-100 transition-colors shadow-lg">
-                  Get Started Now
-                </Link>
-                <Link href="/contact" className="px-8 py-4 bg-transparent border border-slate-700 text-white rounded-xl font-bold text-lg hover:bg-slate-800 transition-colors">
-                  Contact Sales
-                </Link>
-              </div>
+
             </div>
           </div>
         </div>
       </div>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-slate-100 pt-20 pb-10">
+      <footer className="bg-slate-950 text-slate-300 py-20 border-t border-slate-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-4 gap-12 mb-16">
-            <div className="col-span-1 md:col-span-2">
-              <Link href="/" className="flex items-center space-x-3 mb-6">
-                <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center">
-                  <span className="text-white font-bold text-xl">G</span>
+          <div className="grid md:grid-cols-4 gap-12 lg:gap-20 mb-16">
+
+            {/* Brand Column */}
+            <div className="col-span-1 md:col-span-2 space-y-6">
+              <Link href="/" className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-red-500/20">
+                  <span className="text-white font-black text-2xl tracking-tighter">G</span>
                 </div>
-                <span className="text-2xl font-bold text-slate-900">GarageMap</span>
+                <span className="text-2xl font-bold text-white tracking-tight">GarageMap</span>
               </Link>
-              <p className="text-slate-500 text-lg leading-relaxed max-w-sm">
-                Connecting vehicle owners with trusted garages and certified mechanics worldwide. Simple, fast, and reliable.
+              <p className="text-slate-400 text-lg leading-relaxed max-w-sm font-light">
+                Revolutionizing how vehicle owners connect with trusted mechanics.
+                Reliable, fast, and secure automotive services at your fingertips.
               </p>
+              <div className="flex gap-4 pt-4">
+                {[Twitter, Github, Linkedin, Instagram].map((Icon, i) => (
+                  <a key={i} href="#" className="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center text-slate-400 hover:bg-red-500 hover:text-white transition-all duration-300">
+                    <Icon className="w-5 h-5" />
+                  </a>
+                ))}
+              </div>
             </div>
 
+            {/* Links Columns */}
             <div>
-              <h4 className="font-bold text-slate-900 mb-6">Platform</h4>
+              <h4 className="font-bold text-white text-lg mb-6">Platform</h4>
               <ul className="space-y-4">
-                <li><Link href="/garages" className="text-slate-500 hover:text-red-500 transition-colors">Find Garages</Link></li>
-                <li><Link href="/mechanics" className="text-slate-500 hover:text-red-500 transition-colors">For Mechanics</Link></li>
-                <li><Link href="/pricing" className="text-slate-500 hover:text-red-500 transition-colors">Pricing</Link></li>
+                {['Find Garages', 'For Mechanics', 'Pricing', 'Features'].map((item) => (
+                  <li key={item}>
+                    <Link href="#" className="text-slate-400 hover:text-red-400 transition-colors flex items-center group">
+                      <span className="w-0 group-hover:w-2 h-0.5 bg-red-400 mr-0 group-hover:mr-2 transition-all duration-300"></span>
+                      {item}
+                    </Link>
+                  </li>
+                ))}
               </ul>
             </div>
 
             <div>
-              <h4 className="font-bold text-slate-900 mb-6">Company</h4>
-              <ul className="space-y-4">
-                <li><Link href="/about" className="text-slate-500 hover:text-red-500 transition-colors">About Us</Link></li>
-                <li><Link href="/careers" className="text-slate-500 hover:text-red-500 transition-colors">Careers</Link></li>
-                <li><Link href="/contact" className="text-slate-500 hover:text-red-500 transition-colors">Contact</Link></li>
-              </ul>
+              <h4 className="font-bold text-white text-lg mb-6">Newsletter</h4>
+              <p className="text-slate-400 mb-4 text-sm">
+                Get the latest automotive tips and platform updates.
+              </p>
+              <div className="flex flex-col gap-3">
+                <input
+                  type="email"
+                  placeholder="Enter your email"
+                  className="bg-slate-900 border border-slate-800 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 placeholder:text-slate-600"
+                />
+                <button className="bg-white text-slate-900 font-bold px-4 py-3 rounded-xl hover:bg-slate-100 transition-colors">
+                  Subscribe
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="border-t border-slate-100 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-slate-400 text-sm">© 2024 GarageMap. All rights reserved.</p>
-            <div className="flex gap-6">
-              <Link href="/privacy" className="text-slate-400 hover:text-slate-900 text-sm">Privacy</Link>
-              <Link href="/terms" className="text-slate-400 hover:text-slate-900 text-sm">Terms</Link>
+          <div className="border-t border-slate-900 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-slate-500 text-sm">© 2024 GarageMap Inc. All rights reserved.</p>
+            <div className="flex gap-8">
+              {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map((item) => (
+                <Link key={item} href="#" className="text-slate-500 hover:text-white text-sm transition-colors">
+                  {item}
+                </Link>
+              ))}
             </div>
           </div>
         </div>

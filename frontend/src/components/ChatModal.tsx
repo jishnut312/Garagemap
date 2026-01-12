@@ -167,6 +167,16 @@ export default function ChatModal({
                         <div className="flex justify-center py-10">
                             <Loader2 className="w-8 h-8 text-slate-400 animate-spin" />
                         </div>
+                    ) : !otherUserId && !isMechanic ? (
+                        <div className="text-center py-10 px-6">
+                            <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <User className="w-8 h-8 text-orange-500" />
+                            </div>
+                            <h3 className="font-bold text-slate-900 mb-2">Demo Profile</h3>
+                            <p className="text-sm text-slate-500">
+                                This mechanic is a demo listing and has not activated their account. Messages cannot be delivered.
+                            </p>
+                        </div>
                     ) : messages.length === 0 ? (
                         <div className="text-center py-10 text-slate-400">
                             <p>No messages yet.</p>
@@ -195,22 +205,28 @@ export default function ChatModal({
 
                 {/* Input Area */}
                 <form onSubmit={handleSend} className="p-4 bg-white border-t border-slate-100">
-                    <div className="flex items-center gap-2">
-                        <input
-                            type="text"
-                            value={newMessage}
-                            onChange={(e) => setNewMessage(e.target.value)}
-                            placeholder="Type a message..."
-                            className="flex-1 bg-slate-100 border-none rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500/20 text-slate-900 placeholder:text-slate-400"
-                        />
-                        <button
-                            type="submit"
-                            disabled={!newMessage.trim()}
-                            className="w-12 h-12 flex items-center justify-center bg-red-600 text-white rounded-xl hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-red-500/25"
-                        >
-                            <Send className="w-5 h-5" />
-                        </button>
-                    </div>
+                    {(!otherUserId && !isMechanic) ? (
+                        <div className="bg-orange-50 border border-orange-100 p-3 rounded-xl text-xs text-orange-600 font-medium text-center">
+                            Messaging unavailable for demo accounts
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="text"
+                                value={newMessage}
+                                onChange={(e) => setNewMessage(e.target.value)}
+                                placeholder="Type a message..."
+                                className="flex-1 bg-slate-100 border-none rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500/20 text-slate-900 placeholder:text-slate-400"
+                            />
+                            <button
+                                type="submit"
+                                disabled={!newMessage.trim()}
+                                className="w-12 h-12 flex items-center justify-center bg-red-600 text-white rounded-xl hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-red-500/25"
+                            >
+                                <Send className="w-5 h-5" />
+                            </button>
+                        </div>
+                    )}
                 </form>
             </div>
         </div>

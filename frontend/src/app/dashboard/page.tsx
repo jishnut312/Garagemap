@@ -146,6 +146,7 @@ export default function DashboardPage() {
       await createRequest({
         userId: user.uid,
         mechanicId,
+        mechanicUserId: mechanic.userId, // Link the mechanic's user account for chat/notifications
         userName: user.displayName || user.email || 'User',
         mechanicName: mechanic.name,
         serviceType,
@@ -155,6 +156,9 @@ export default function DashboardPage() {
       });
 
       alert(`Service request (${serviceType}) sent successfully!`);
+      // Refresh requests
+      const reqs = await getUserRequests(user.uid);
+      setUserRequests(reqs);
     } catch (error) {
       console.error('Error creating request:', error);
       alert('Failed to send service request. Please try again.');
@@ -191,44 +195,102 @@ export default function DashboardPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {userRequests.map((req) => (
-                <div key={req.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-all">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="font-bold text-slate-900 line-clamp-1">{req.mechanicName}</h3>
-                      <p className="text-sm text-slate-500 flex items-center gap-1 mt-1">
-                        <span className="w-2 h-2 rounded-full bg-slate-300"></span>
-                        {req.serviceType.toUpperCase()}
-                      </p>
+                <div key={req.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg transition-all duration-300 group">
+                  {/* Header */}
+                  <div className="p-6 pb-4">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-600 font-bold border border-slate-200">
+                          {req.mechanicName.charAt(0)}
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-slate-900 text-lg">{req.mechanicName}</h3>
+                          <div className="flex items-center gap-2 text-sm text-slate-500">
+                            <span className="capitalize font-medium text-slate-700">{req.serviceType}</span>
+                            <span>•</span>
+                            <span>{req.createdAt?.toDate().toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${req.status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                        req.status === 'accepted' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                          req.status === 'in_progress' ? 'bg-purple-50 text-purple-700 border-purple-200 animate-pulse' :
+                            req.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                              'bg-slate-100 text-slate-600'
+                        }`}>
+                        {req.status.replace('_', ' ')}
+                      </span>
                     </div>
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${req.status === 'pending' ? 'bg-yellow-50 text-yellow-700 border border-yellow-200' :
-                      req.status === 'accepted' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
-                        req.status === 'in_progress' ? 'bg-purple-50 text-purple-700 border border-purple-200 animate-pulse' :
-                          req.status === 'completed' ? 'bg-green-50 text-green-700 border border-green-200' :
-                            'bg-slate-100 text-slate-600'
-                      }`}>
-                      {req.status}
-                    </span>
+
+                    {/* Progress Stepper */}
+                    <div className="relative flex items-center justify-between mt-6 px-2 mb-6">
+                      {/* Connection Line */}
+                      <div className="absolute top-1/2 left-0 w-full h-0.5 bg-slate-100 -z-10 bg-gradient-to-r from-red-500/20 to-slate-200"></div>
+
+                      {/* Steps */}
+                      {[
+                        { id: 'pending', label: 'Sent' },
+                        { id: 'accepted', label: 'Accepted' },
+                        { id: 'in_progress', label: 'Work' },
+                        { id: 'completed', label: 'Done' }
+                      ].map((step, idx) => {
+                        // Determine massive status logic
+                        const statusOrder = ['pending', 'accepted', 'in_progress', 'completed'];
+                        const currentIdx = statusOrder.indexOf(req.status);
+                        const stepIdx = idx;
+                        const isCompleted = stepIdx < currentIdx;
+                        const isCurrent = stepIdx === currentIdx;
+
+                        return (
+                          <div key={step.id} className="flex flex-col items-center gap-2 bg-white px-2">
+                            <div className={`w-3 h-3 rounded-full border-2 transition-all duration-300 ${isCompleted ? 'bg-red-500 border-red-500' :
+                                isCurrent ? 'bg-white border-red-500 scale-125 ring-4 ring-red-50' :
+                                  'bg-slate-100 border-slate-300'
+                              }`} />
+                            <span className={`text-[10px] font-bold uppercase tracking-wide transition-colors ${isCurrent ? 'text-red-500' :
+                                isCompleted ? 'text-slate-700' :
+                                  'text-slate-300'
+                              }`}>
+                              {step.label}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <p className="text-sm text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-100 italic">
+                      "{req.description || "No description provided."}"
+                    </p>
                   </div>
 
-                  <p className="text-sm text-slate-600 mb-4 line-clamp-2 bg-slate-50 p-3 rounded-xl border border-slate-50">
-                    {req.description || "No description provided."}
-                  </p>
+                  {/* Actions Footer */}
+                  <div className="bg-slate-50 px-6 py-4 border-t border-slate-100 flex items-center justify-between">
+                    <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                      Action Required
+                    </div>
 
-                  <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-100">
-                    <span className="text-xs text-slate-400 font-medium">
-                      {req.createdAt?.toDate().toLocaleDateString()}
-                    </span>
+                    {(req.status === 'pending') && (
+                      <span className="text-sm text-slate-500 font-medium flex items-center gap-2">
+                        <Clock className="w-4 h-4" /> Waiting for response...
+                      </span>
+                    )}
 
-                    {(req.status === 'pending' || req.status === 'accepted' || req.status === 'in_progress') && (
+                    {(req.status === 'accepted' || req.status === 'in_progress') && (
                       <button
                         onClick={() => {
                           setSelectedChatRequest(req);
                           setIsChatOpen(true);
                         }}
-                        className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/10 active:scale-[0.98]"
+                        className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-bold rounded-xl hover:from-blue-500 hover:to-blue-600 transition-all shadow-lg shadow-blue-500/25 hover:-translate-y-0.5 active:scale-[0.98] group-hover:scale-105"
                       >
-                        <MessageCircle className="w-4 h-4" />
-                        Chat
+                        <MessageCircle className="w-4 h-4 fill-white/20" />
+                        Chat with Mechanic
+                      </button>
+                    )}
+
+                    {req.status === 'completed' && (
+                      <button className="flex items-center gap-2 px-6 py-2.5 bg-white border border-slate-200 text-slate-600 text-sm font-bold rounded-xl hover:bg-slate-50">
+                        View Receipt
                       </button>
                     )}
                   </div>
