@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getMechanics, type Mechanic } from '@/lib/firestore';
 import Navbar from '@/components/Navbar';
+import { reverseGeocode, getShortLocation, formatCoordinates } from '@/lib/geocoding';
 
 interface Workshop {
   id: string | number;
@@ -126,14 +127,27 @@ export default function MapWorkshop() {
     setIsLocating(true);
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         console.log("✅ Location received:", position.coords);
         const userPos = {
           lat: position.coords.latitude,
           lng: position.coords.longitude
         };
         setUserPos(userPos);
-        setUserLocation(`${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`);
+
+        // Perform reverse geocoding to get place name
+        const geocodeResult = await reverseGeocode(userPos.lat, userPos.lng);
+
+        if (geocodeResult) {
+          // Use short location format (e.g., "Bangalore, Karnataka")
+          const placeName = getShortLocation(geocodeResult);
+          setUserLocation(placeName);
+          console.log("📍 Place name:", placeName);
+        } else {
+          // Fallback to coordinates if geocoding fails
+          setUserLocation(formatCoordinates(userPos.lat, userPos.lng));
+        }
+
         setSortBy('distance'); // Auto-switch to distance sort
         setIsLocating(false);
 
