@@ -51,7 +51,13 @@ async function apiRequest(
 
     if (!response.ok) {
         const error = await response.json().catch(() => ({ error: 'Request failed' }));
-        throw new Error(error.error || error.detail || 'API request failed');
+        console.error('API Error Details:', {
+            status: response.status,
+            statusText: response.statusText,
+            url: `${DJANGO_API_URL}${endpoint}`,
+            error: error
+        });
+        throw new Error(error.error || error.detail || JSON.stringify(error) || 'API request failed');
     }
 
     return response.json();
@@ -163,8 +169,12 @@ export async function getReviews(workshopId?: number) {
     return apiRequest(`/reviews/${query}`);
 }
 
+export async function getWorkshopReviews(workshopId: number) {
+    return apiRequest(`/reviews/workshop_reviews/?workshop_id=${workshopId}`);
+}
+
 export async function createReview(data: {
-    workshop: number;
+    workshop_id?: number;
     rating: number;
     comment?: string;
     service_request?: number;

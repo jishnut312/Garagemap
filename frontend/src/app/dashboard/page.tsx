@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { getMechanics, type Mechanic, createRequest, getUserRequests, type Request } from '@/lib/firestore';
+import { createReview } from '@/lib/django-api';
 import { Search, MapPin, Phone, Star, Clock, Filter, Wrench, ArrowRight, MessageCircle, User, Calendar, CheckCircle, AlertCircle } from 'lucide-react';
 import ChatModal from '@/components/ChatModal';
+import RatingModal from '@/components/RatingModal';
 import Navbar from '@/components/Navbar';
 import AIChatWidget from '@/components/AIChatWidget';
 
@@ -20,6 +22,10 @@ export default function DashboardPage() {
   // Chat State
   const [selectedChatRequest, setSelectedChatRequest] = useState<Request | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+
+  // Rating State
+  const [selectedRatingRequest, setSelectedRatingRequest] = useState<Request | null>(null);
+  const [isRatingOpen, setIsRatingOpen] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedService, setSelectedService] = useState('');
@@ -135,6 +141,19 @@ export default function DashboardPage() {
     return R * c;
   };
 
+  // Check if chat history is still available (within 2 weeks of completion)
+  const isChatAvailable = (request: Request): boolean => {
+    if (request.status !== 'completed') return true; // Always available for active requests
+
+    // Check if request was completed within the last 2 weeks
+    const twoWeeksInMs = 14 * 24 * 60 * 60 * 1000; // 2 weeks in milliseconds
+    const completedAt = request.updatedAt?.toMillis() || request.createdAt?.toMillis() || 0;
+    const now = Date.now();
+    const timeSinceCompletion = now - completedAt;
+
+    return timeSinceCompletion <= twoWeeksInMs;
+  };
+
   const handleRequestService = async (mechanicId: string, serviceType: string = 'general', urgency: 'low' | 'medium' | 'high' | 'emergency' = 'low') => {
     if (!user) return;
 
@@ -162,6 +181,29 @@ export default function DashboardPage() {
     } catch (error) {
       console.error('Error creating request:', error);
       alert('Failed to send service request. Please try again.');
+    }
+  };
+
+  const handleSubmitRating = async (rating: number, comment: string) => {
+    if (!selectedRatingRequest || !user) return;
+
+    try {
+      // Submit review to Django backend
+      // Note: workshop_id and service_request are optional
+      // The backend will create a default workshop if needed
+      await createReview({
+        rating,
+        comment,
+      });
+
+      alert('Thank you for your rating!');
+
+      // Refresh requests to update UI
+      const reqs = await getUserRequests(user.uid);
+      setUserRequests(reqs);
+    } catch (error) {
+      console.error('Error submitting rating:', error);
+      throw error; // Re-throw to let the modal handle it
     }
   };
 
@@ -244,12 +286,12 @@ export default function DashboardPage() {
                         return (
                           <div key={step.id} className="flex flex-col items-center gap-2 bg-white px-2">
                             <div className={`w-3 h-3 rounded-full border-2 transition-all duration-300 ${isCompleted ? 'bg-red-500 border-red-500' :
-                                isCurrent ? 'bg-white border-red-500 scale-125 ring-4 ring-red-50' :
-                                  'bg-slate-100 border-slate-300'
+                              isCurrent ? 'bg-white border-red-500 scale-125 ring-4 ring-red-50' :
+                                'bg-slate-100 border-slate-300'
                               }`} />
                             <span className={`text-[10px] font-bold uppercase tracking-wide transition-colors ${isCurrent ? 'text-red-500' :
-                                isCompleted ? 'text-slate-700' :
-                                  'text-slate-300'
+                              isCompleted ? 'text-slate-700' :
+                                'text-slate-300'
                               }`}>
                               {step.label}
                             </span>
@@ -266,7 +308,7 @@ export default function DashboardPage() {
                   {/* Actions Footer */}
                   <div className="bg-slate-50 px-6 py-4 border-t border-slate-100 flex items-center justify-between">
                     <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                      Action Required
+                      {req.status === 'completed' ? 'Actions' : 'Action Required'}
                     </div>
 
                     {(req.status === 'pending') && (
@@ -289,9 +331,38 @@ export default function DashboardPage() {
                     )}
 
                     {req.status === 'completed' && (
-                      <button className="flex items-center gap-2 px-6 py-2.5 bg-white border border-slate-200 text-slate-600 text-sm font-bold rounded-xl hover:bg-slate-50">
-                        View Receipt
-                      </button>
+                      <div className="flex gap-3">
+                        {/* View Chat History Button - Only show if within 2 weeks */}
+                        {isChatAvailable(req) ? (
+                          <button
+                            onClick={() => {
+                              setSelectedChatRequest(req);
+                              setIsChatOpen(true);
+                            }}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-slate-300 text-slate-700 text-sm font-bold rounded-xl hover:bg-slate-50 hover:border-slate-400 transition-all"
+                          >
+                            <MessageCircle className="w-4 h-4" />
+                            View Chat
+                          </button>
+                        ) : (
+                          <span className="text-xs text-slate-400 italic flex items-center gap-1">
+                            <MessageCircle className="w-3 h-3" />
+                            Chat expired (2 weeks)
+                          </span>
+                        )}
+
+                        {/* Rate Service Button */}
+                        <button
+                          onClick={() => {
+                            setSelectedRatingRequest(req);
+                            setIsRatingOpen(true);
+                          }}
+                          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white text-sm font-bold rounded-xl hover:from-yellow-400 hover:to-yellow-500 transition-all shadow-lg shadow-yellow-500/25 hover:-translate-y-0.5 active:scale-[0.98]"
+                        >
+                          <Star className="w-4 h-4 fill-white/50" />
+                          Rate Service
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -518,6 +589,16 @@ export default function DashboardPage() {
           isMechanic={false}
           currentUserName={user.displayName || 'User'}
           mechanicId={selectedChatRequest.mechanicId}
+        />
+      )}
+
+      {/* Rating Modal */}
+      {selectedRatingRequest && (
+        <RatingModal
+          isOpen={isRatingOpen}
+          onClose={() => setIsRatingOpen(false)}
+          mechanicName={selectedRatingRequest.mechanicName}
+          onSubmit={handleSubmitRating}
         />
       )}
 

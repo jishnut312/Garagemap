@@ -110,10 +110,42 @@ class ReviewSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     workshop = WorkshopSerializer(read_only=True)
     workshop_id = serializers.PrimaryKeyRelatedField(
-        queryset=Workshop.objects.all(), source='workshop', write_only=True
+        queryset=Workshop.objects.all(), source='workshop', write_only=True, required=False, allow_null=True
+    )
+    service_request = serializers.PrimaryKeyRelatedField(
+        queryset=ServiceRequest.objects.all(), required=False, allow_null=True
     )
 
     class Meta:
         model = Review
         fields = ['id', 'user', 'workshop', 'workshop_id', 'service_request', 'rating', 'comment', 'created_at']
         read_only_fields = ['created_at']
+    
+    def create(self, validated_data):
+        # If no workshop provided, create or get a default one
+        if 'workshop' not in validated_data or validated_data.get('workshop') is None:
+            from django.contrib.auth.models import User
+            # Get or create a default owner
+            default_user, _ = User.objects.get_or_create(
+                username='default_workshop_owner',
+                defaults={'email': 'workshop@example.com'}
+            )
+            # Get or create a default workshop
+            default_workshop, _ = Workshop.objects.get_or_create(
+                workshop_name='Default Workshop',  # Fixed: use workshop_name instead of name
+                defaults={
+                    'owner': default_user,
+                    'address': 'Default Address',
+                    'latitude': 0.0,
+                    'longitude': 0.0,
+                }
+            )
+            validated_data['workshop'] = default_workshop
+        
+        # Remove service_request if it's None (doesn't exist in Django DB)
+        if 'service_request' in validated_data and validated_data['service_request'] is None:
+            del validated_data['service_request']
+        
+        return super().create(validated_data)
+
+

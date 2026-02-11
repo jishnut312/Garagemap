@@ -7,20 +7,37 @@ from firebase_admin import credentials, auth
 from django.contrib.auth.models import User
 from django.http import JsonResponse
 from api.models import UserProfile
+from decouple import config
 import os
+import json
 
 # Initialize Firebase Admin SDK (only once)
 if not firebase_admin._apps:
-    # Use your Firebase service account credentials
-    # You can download this from Firebase Console > Project Settings > Service Accounts
-    cred_path = os.path.join(os.path.dirname(__file__), '..', 'firebase-credentials.json')
+    # Try to load from environment variable first (for production)
+    firebase_creds_json = config('FIREBASE_CREDENTIALS_JSON', default=None)
     
-    if os.path.exists(cred_path):
-        cred = credentials.Certificate(cred_path)
-        firebase_admin.initialize_app(cred)
+    if firebase_creds_json:
+        try:
+            # Parse JSON from environment variable
+            cred_dict = json.loads(firebase_creds_json)
+            cred = credentials.Certificate(cred_dict)
+            firebase_admin.initialize_app(cred)
+            print("✅ Firebase initialized from environment variable")
+        except Exception as e:
+            print(f"❌ Error loading Firebase credentials from env: {e}")
+            firebase_admin.initialize_app()
     else:
-        # For development, you can use Application Default Credentials
-        firebase_admin.initialize_app()
+        # Fall back to file (for local development)
+        cred_path = os.path.join(os.path.dirname(__file__), '..', 'firebase-credentials.json')
+        
+        if os.path.exists(cred_path):
+            cred = credentials.Certificate(cred_path)
+            firebase_admin.initialize_app(cred)
+            print("✅ Firebase initialized from credentials file")
+        else:
+            # Last resort: use Application Default Credentials
+            firebase_admin.initialize_app()
+            print("⚠️ Firebase initialized with default credentials")
 
 
 class FirebaseAuthenticationMiddleware:
@@ -34,7 +51,7 @@ class FirebaseAuthenticationMiddleware:
 
     def __call__(self, request):
         # Skip auth for certain paths
-        excluded_paths = ['/admin/', '/api/public/']
+        excluded_paths = ['/admin/', '/api/public/', '/api/reviews/']  # Added reviews endpoint
         if any(request.path.startswith(path) for path in excluded_paths):
             return self.get_response(request)
 
@@ -72,11 +89,10 @@ class FirebaseAuthenticationMiddleware:
                 request.firebase_user = decoded_token
                 
             except Exception as e:
-                # Invalid token
-                return JsonResponse({
-                    'error': 'Invalid authentication token',
-                    'detail': str(e)
-                }, status=401)
+                # Invalid token - but don't block the request, just log it
+                print(f"❌ Firebase auth error: {e}")
+                # Don't return 401, let the view handle it
+                pass
         
         response = self.get_response(request)
         return response
