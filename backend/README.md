@@ -134,10 +134,10 @@ def my_view(request):
 | `/api/workshops/{id}/` | GET | Get workshop details | No |
 | `/api/workshops/my_workshop/` | GET | Get my workshop | Yes |
 | `/api/workshops/nearby/` | GET | Find nearby workshops | No |
-| `/api/requests/` | GET | List service requests | Yes |
-| `/api/requests/` | POST | Create service request | Yes |
-| `/api/requests/{id}/accept/` | POST | Accept request (mechanics) | Yes |
-| `/api/requests/{id}/complete/` | POST | Complete request | Yes |
+| `/api/service-requests/` | GET | List service requests | Yes |
+| `/api/service-requests/` | POST | Create service request | Yes |
+| `/api/service-requests/{id}/accept/` | POST | Accept request (mechanics) | Yes |
+| `/api/service-requests/{id}/complete/` | POST | Complete request | Yes |
 | `/api/reviews/` | GET/POST | Workshop reviews | Yes (POST) |
 | `/api/mechanics/` | GET | List all mechanics | No |
 
@@ -145,14 +145,14 @@ def my_view(request):
 
 #### Create Service Request:
 ```bash
-POST http://localhost:8000/api/requests/
+POST http://localhost:8000/api/service-requests/
 Headers:
   Authorization: Bearer <firebase-token>
   Content-Type: application/json
 
 Body:
 {
-  "workshop": 1,
+  "workshop_id": 1,
   "service_type": "emergency",
   "description": "Car broke down",
   "urgency": "emergency",
@@ -216,7 +216,7 @@ export async function fetchWorkshops() {
 
 export async function createServiceRequest(data: any) {
   const token = await getAuthToken();
-  const response = await fetch(`${DJANGO_API}/requests/`, {
+  const response = await fetch(`${DJANGO_API}/service-requests/`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,

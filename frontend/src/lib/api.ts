@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { auth } from './firebase';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
 
@@ -10,8 +11,8 @@ const api = axios.create({
 });
 
 // Add auth token to requests
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('authToken');
+api.interceptors.request.use(async (config) => {
+  const token = await auth.currentUser?.getIdToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -90,25 +91,25 @@ export const mechanicAPI = {
 export const requestAPI = {
   // Create service request
   create: async (requestData: Partial<ServiceRequest>): Promise<ServiceRequest> => {
-    const response = await api.post('/requests/', requestData);
+    const response = await api.post('/service-requests/', requestData);
     return response.data;
   },
 
   // Get user's requests
-  getUserRequests: async (userId: string): Promise<ServiceRequest[]> => {
-    const response = await api.get(`/requests/user/${userId}/`);
+  getUserRequests: async (_userId: string): Promise<ServiceRequest[]> => {
+    const response = await api.get('/service-requests/');
     return response.data;
   },
 
   // Update request status
   updateStatus: async (id: number, status: string): Promise<ServiceRequest> => {
-    const response = await api.patch(`/requests/${id}/`, { status });
+    const response = await api.patch(`/service-requests/${id}/`, { status });
     return response.data;
   },
 
   // Get request by ID
   getById: async (id: number): Promise<ServiceRequest> => {
-    const response = await api.get(`/requests/${id}/`);
+    const response = await api.get(`/service-requests/${id}/`);
     return response.data;
   },
 };

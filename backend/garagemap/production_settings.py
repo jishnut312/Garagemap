@@ -6,12 +6,16 @@ import dj_database_url
 from decouple import config
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-obskr51(a&os8!g=3$-wt1&w3fme1!!xpl%x=)pps@^b#bv@i$')
+SECRET_KEY = config('SECRET_KEY', default='')
+if not SECRET_KEY:
+    raise ValueError('SECRET_KEY must be set in production')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='').split(',')
+if not any(host.strip() for host in ALLOWED_HOSTS):
+    raise ValueError('ALLOWED_HOSTS must be set in production')
 
 # Database Configuration
 # Render provides DATABASE_URL automatically for PostgreSQL
@@ -35,6 +39,5 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'

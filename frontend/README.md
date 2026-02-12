@@ -103,8 +103,8 @@ The frontend is designed to work with a Django backend. Key API endpoints:
 
 - `GET /api/mechanics/` - Get all mechanics
 - `GET /api/mechanics/nearby/` - Get nearby mechanics
-- `POST /api/requests/` - Create service request
-- `GET /api/requests/user/{userId}/` - Get user's requests
+- `POST /api/service-requests/` - Create service request
+- `GET /api/service-requests/` - Get service requests
 
 ## Features in Detail
 

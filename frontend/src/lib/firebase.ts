@@ -3,14 +3,22 @@ import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Missing required env var: ${name}`);
+  }
+  return value;
+}
+
 const firebaseConfig = {
-  apiKey: "AIzaSyB0MzepD6RNf-WtldDGT3zIoI0gTtHBWDk",
-  authDomain: "garagemap-11a27.firebaseapp.com",
-  projectId: "garagemap-11a27",
-  storageBucket: "garagemap-11a27.firebasestorage.app",
-  messagingSenderId: "703376208590",
-  appId: "1:703376208590:web:c7dd1201f6cb780604169f",
-  measurementId: "G-9J4EV60C6Z"
+  apiKey: requireEnv('NEXT_PUBLIC_FIREBASE_API_KEY'),
+  authDomain: requireEnv('NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN'),
+  projectId: requireEnv('NEXT_PUBLIC_FIREBASE_PROJECT_ID'),
+  storageBucket: requireEnv('NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET'),
+  messagingSenderId: requireEnv('NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID'),
+  appId: requireEnv('NEXT_PUBLIC_FIREBASE_APP_ID'),
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
 const app = initializeApp(firebaseConfig);

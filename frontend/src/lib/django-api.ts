@@ -7,7 +7,10 @@
 
 import { auth } from './firebase';
 
-const DJANGO_API_URL = process.env.NEXT_PUBLIC_DJANGO_API_URL || 'http://localhost:8000/api';
+const DJANGO_API_URL =
+    process.env.NEXT_PUBLIC_DJANGO_API_URL ||
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    'http://localhost:8000/api';
 
 /**
  * Get Firebase ID token for authenticated requests
@@ -58,6 +61,10 @@ async function apiRequest(
             error: error
         });
         throw new Error(error.error || error.detail || JSON.stringify(error) || 'API request failed');
+    }
+
+    if (response.status === 204) {
+        return null;
     }
 
     return response.json();
@@ -130,11 +137,11 @@ export async function getNearbyWorkshops(params?: {
 // ============================================
 
 export async function getServiceRequests() {
-    return apiRequest('/requests/');
+    return apiRequest('/service-requests/');
 }
 
 export async function createServiceRequest(data: {
-    workshop: number;
+    workshop_id: number;
     service_type: string;
     description: string;
     urgency: 'low' | 'medium' | 'high' | 'emergency';
@@ -142,20 +149,20 @@ export async function createServiceRequest(data: {
     user_longitude: number;
     user_address?: string;
 }) {
-    return apiRequest('/requests/', {
+    return apiRequest('/service-requests/', {
         method: 'POST',
         body: JSON.stringify(data),
     });
 }
 
 export async function acceptServiceRequest(requestId: number) {
-    return apiRequest(`/requests/${requestId}/accept/`, {
+    return apiRequest(`/service-requests/${requestId}/accept/`, {
         method: 'POST',
     });
 }
 
 export async function completeServiceRequest(requestId: number) {
-    return apiRequest(`/requests/${requestId}/complete/`, {
+    return apiRequest(`/service-requests/${requestId}/complete/`, {
         method: 'POST',
     });
 }
@@ -179,6 +186,10 @@ export async function createReview(data: {
     comment?: string;
     service_request?: number;
 }) {
+    if (!data.workshop_id && !data.service_request) {
+        throw new Error('workshop_id or service_request is required to create a review');
+    }
+
     return apiRequest('/reviews/', {
         method: 'POST',
         body: JSON.stringify(data),

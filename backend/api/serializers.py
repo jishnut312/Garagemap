@@ -1,8 +1,4 @@
-import base64
-import uuid
-from django.core.files.base import ContentFile
 from rest_framework import serializers
-from django.contrib.auth.models import User
 from .models import UserProfile, Workshop, ServiceRequest, Review
 
 
@@ -59,6 +55,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
         fields = ['id', 'user', 'firebase_uid', 'user_type', 'phone', 'profile_image', 'created_at']
+        read_only_fields = ['firebase_uid', 'created_at']
 
 
 class WorkshopSerializer(serializers.ModelSerializer):
@@ -120,32 +117,17 @@ class ReviewSerializer(serializers.ModelSerializer):
         model = Review
         fields = ['id', 'user', 'workshop', 'workshop_id', 'service_request', 'rating', 'comment', 'created_at']
         read_only_fields = ['created_at']
-    
-    def create(self, validated_data):
-        # If no workshop provided, create or get a default one
-        if 'workshop' not in validated_data or validated_data.get('workshop') is None:
-            from django.contrib.auth.models import User
-            # Get or create a default owner
-            default_user, _ = User.objects.get_or_create(
-                username='default_workshop_owner',
-                defaults={'email': 'workshop@example.com'}
-            )
-            # Get or create a default workshop
-            default_workshop, _ = Workshop.objects.get_or_create(
-                workshop_name='Default Workshop',  # Fixed: use workshop_name instead of name
-                defaults={
-                    'owner': default_user,
-                    'address': 'Default Address',
-                    'latitude': 0.0,
-                    'longitude': 0.0,
-                }
-            )
-            validated_data['workshop'] = default_workshop
-        
-        # Remove service_request if it's None (doesn't exist in Django DB)
-        if 'service_request' in validated_data and validated_data['service_request'] is None:
-            del validated_data['service_request']
-        
-        return super().create(validated_data)
 
+    def validate(self, attrs):
+        workshop = attrs.get('workshop')
+        service_request = attrs.get('service_request')
 
+        if service_request and not workshop:
+            attrs['workshop'] = service_request.workshop
+
+        if not attrs.get('workshop'):
+            raise serializers.ValidationError(
+                {'workshop_id': 'workshop_id is required (or provide service_request).'}
+            )
+
+        return attrs

@@ -188,10 +188,14 @@ export default function DashboardPage() {
     if (!selectedRatingRequest || !user) return;
 
     try {
+      const workshopId = Number(selectedRatingRequest.mechanicId);
+      if (!Number.isFinite(workshopId)) {
+        throw new Error('Unable to map this request to a workshop for rating submission.');
+      }
+
       // Submit review to Django backend
-      // Note: workshop_id and service_request are optional
-      // The backend will create a default workshop if needed
       await createReview({
+        workshop_id: workshopId,
         rating,
         comment,
       });

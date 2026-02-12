@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Bot, User, Headphones } from 'lucide-react';
+import { X, Send, Bot, User } from 'lucide-react';
+import { auth } from '@/lib/firebase';
 
 interface Message {
     role: 'user' | 'assistant';
@@ -18,6 +19,11 @@ export default function AIChatWidget({
     showTrigger = 'always',
     idleTimeMs = 8000
 }: AIChatWidgetProps) {
+    const djangoApiUrl =
+        process.env.NEXT_PUBLIC_DJANGO_API_URL ||
+        process.env.NEXT_PUBLIC_API_BASE_URL ||
+        'http://localhost:8000/api';
+
     const [isOpen, setIsOpen] = useState(false);
     const [isVisible, setIsVisible] = useState(showTrigger === 'always');
     const [isDismissed, setIsDismissed] = useState(false);
@@ -97,10 +103,12 @@ export default function AIChatWidget({
         setIsLoading(true);
 
         try {
-            const response = await fetch('http://localhost:8000/api/chatbot/', {
+            const token = await auth.currentUser?.getIdToken();
+            const response = await fetch(`${djangoApiUrl}/chatbot/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
                 },
                 body: JSON.stringify({
                     message: inputMessage,

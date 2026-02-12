@@ -5,11 +5,13 @@ Verifies Firebase ID tokens and creates/retrieves Django users
 import firebase_admin
 from firebase_admin import credentials, auth
 from django.contrib.auth.models import User
-from django.http import JsonResponse
 from api.models import UserProfile
 from decouple import config
 import os
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Initialize Firebase Admin SDK (only once)
 if not firebase_admin._apps:
@@ -22,9 +24,9 @@ if not firebase_admin._apps:
             cred_dict = json.loads(firebase_creds_json)
             cred = credentials.Certificate(cred_dict)
             firebase_admin.initialize_app(cred)
-            print("✅ Firebase initialized from environment variable")
+            logger.info("Firebase initialized from environment variable")
         except Exception as e:
-            print(f"❌ Error loading Firebase credentials from env: {e}")
+            logger.exception("Error loading Firebase credentials from env: %s", e)
             firebase_admin.initialize_app()
     else:
         # Fall back to file (for local development)
@@ -33,11 +35,11 @@ if not firebase_admin._apps:
         if os.path.exists(cred_path):
             cred = credentials.Certificate(cred_path)
             firebase_admin.initialize_app(cred)
-            print("✅ Firebase initialized from credentials file")
+            logger.info("Firebase initialized from credentials file")
         else:
             # Last resort: use Application Default Credentials
             firebase_admin.initialize_app()
-            print("⚠️ Firebase initialized with default credentials")
+            logger.warning("Firebase initialized with default credentials")
 
 
 class FirebaseAuthenticationMiddleware:
@@ -51,7 +53,7 @@ class FirebaseAuthenticationMiddleware:
 
     def __call__(self, request):
         # Skip auth for certain paths
-        excluded_paths = ['/admin/', '/api/public/', '/api/reviews/']  # Added reviews endpoint
+        excluded_paths = ['/admin/', '/api/public/']
         if any(request.path.startswith(path) for path in excluded_paths):
             return self.get_response(request)
 
@@ -90,7 +92,7 @@ class FirebaseAuthenticationMiddleware:
                 
             except Exception as e:
                 # Invalid token - but don't block the request, just log it
-                print(f"❌ Firebase auth error: {e}")
+                logger.warning("Firebase auth error: %s", e)
                 # Don't return 401, let the view handle it
                 pass
         
@@ -103,5 +105,5 @@ def get_firebase_user(uid):
     try:
         return auth.get_user(uid)
     except Exception as e:
-        print(f"Error getting Firebase user: {e}")
+        logger.warning("Error getting Firebase user: %s", e)
         return None

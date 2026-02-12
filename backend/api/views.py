@@ -1,9 +1,8 @@
 from rest_framework import viewsets, permissions, status
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import action, api_view, permission_classes, throttle_classes
 from rest_framework.response import Response
+from rest_framework.throttling import UserRateThrottle
 from django.db.models import Q
-from django.contrib.auth.models import User
-from django.conf import settings
 from decouple import config
 import google.generativeai as genai
 from .models import UserProfile, Workshop, ServiceRequest, Review
@@ -29,12 +28,19 @@ class MeViewSet(viewsets.ViewSet):
     def list(self, request):
         return Response(UserSerializer(request.user).data)
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get', 'patch'])
     def profile(self, request):
+        firebase_uid = getattr(request, 'firebase_user', {}).get('uid', request.user.username)
         profile, _ = UserProfile.objects.get_or_create(
             user=request.user,
-            defaults={'firebase_uid': getattr(request.user, 'firebase_uid', '')}
+            defaults={'firebase_uid': firebase_uid}
         )
+        if request.method == 'PATCH':
+            serializer = UserProfileSerializer(profile, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
+
         return Response(UserProfileSerializer(profile).data)
 
 
@@ -79,6 +85,12 @@ class ServiceRequestViewSet(viewsets.ModelViewSet):
     serializer_class = ServiceRequestSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff:
+            return self.queryset
+        return self.queryset.filter(Q(user=user) | Q(workshop__owner=user)).distinct()
+
     def perform_create(self, serializer):
         serializer.save(user=request.user, status='pending')
 
@@ -104,49 +116,11 @@ class ServiceRequestViewSet(viewsets.ModelViewSet):
 class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.select_related('user', 'workshop').all()
     serializer_class = ReviewSerializer
-    permission_classes = [permissions.AllowAny]  # Allow anyone for testing
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def perform_create(self, serializer):
-        print("🔍 DEBUG: Starting review creation")
-        print(f"🔍 DEBUG: Request user: {self.request.user}")
-        print(f"🔍 DEBUG: User authenticated: {self.request.user.is_authenticated}")
-        
-        # Get or create a test user for all reviews
-        from django.contrib.auth.models import User
-        try:
-            user, created = User.objects.get_or_create(
-                username='test_user',
-                defaults={
-                    'email': 'test@example.com',
-                    'first_name': 'Test',
-                    'last_name': 'User'
-                }
-            )
-            print(f"🔍 DEBUG: User created/retrieved: {user.username} (created={created})")
-        except Exception as e:
-            print(f"❌ DEBUG: Error creating user: {e}")
-            raise
-        
-        try:
-            print(f"🔍 DEBUG: Saving review with user: {user}")
-            review = serializer.save(user=user)
-            print(f"🔍 DEBUG: Review saved: {review.id}")
-        except Exception as e:
-            print(f"❌ DEBUG: Error saving review: {e}")
-            import traceback
-            traceback.print_exc()
-            raise
-        
-        # Automatically update workshop rating
-        try:
-            print(f"🔍 DEBUG: Updating workshop rating for: {review.workshop}")
-            review.workshop.update_rating()
-            print(f"🔍 DEBUG: Workshop rating updated successfully")
-        except Exception as e:
-            print(f"❌ DEBUG: Error updating workshop rating: {e}")
-            import traceback
-            traceback.print_exc()
-            raise
+        review = serializer.save(user=self.request.user)
+        review.workshop.update_rating()
     
     @action(detail=False, methods=['get'])
     def workshop_reviews(self, request):
@@ -196,7 +170,8 @@ if GEMINI_API_KEY:
 
 
 @api_view(['POST'])
-@permission_classes([permissions.AllowAny])
+@permission_classes([permissions.IsAuthenticated])
+@throttle_classes([UserRateThrottle])
 def ai_chatbot(request):
     """
     AI-powered chatbot for customer assistance using Google Gemini.
