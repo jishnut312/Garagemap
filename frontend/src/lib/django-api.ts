@@ -85,6 +85,8 @@ export interface Workshop {
     rating?: number;
     reviews_count?: number;
     city?: string;
+    address?: string;
+    distance_km?: number;  // returned by /nearby/ endpoint
 }
 
 // ============================================
@@ -124,11 +126,19 @@ export async function updateWorkshop(id: number, data: Partial<any>) {
     });
 }
 
-export async function getNearbyWorkshops(params?: {
+export async function getNearbyWorkshops(params: {
+    lat: number;
+    lng: number;
+    radius?: number;        // km, default 10
     service_type?: string;
-    city?: string;
-}) {
-    const query = new URLSearchParams(params as any).toString();
+}): Promise<Workshop[]> {
+    const query = new URLSearchParams(
+        Object.fromEntries(
+            Object.entries(params)
+                .filter(([, v]) => v !== undefined)
+                .map(([k, v]) => [k, String(v)])
+        )
+    ).toString();
     return apiRequest(`/workshops/nearby/?${query}`);
 }
 

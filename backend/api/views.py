@@ -50,30 +50,86 @@ class WorkshopViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
 
     def perform_create(self, serializer):
-        serializer.save(owner=request.user)
+        serializer.save(owner=self.request.user)
 
     @action(detail=False, methods=['get'])
     def nearby(self, request):
-        """Return workshops filtered by simple query params."""
+        """
+        Return workshops near a given location using the Haversine formula.
+
+        Query params:
+          - lat (float): User's latitude  [required]
+          - lng (float): User's longitude [required]
+          - radius (float): Search radius in km (default: 10)
+          - service_type (str): Filter by service type (optional)
+        """
+        import math
+
+        lat = request.query_params.get('lat')
+        lng = request.query_params.get('lng')
+        radius_km = float(request.query_params.get('radius', 10))
         service_type = request.query_params.get('service_type')
-        city = request.query_params.get('city')
-        q = Q()
+
+        if not lat or not lng:
+            return Response(
+                {'error': 'lat and lng query parameters are required.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            user_lat = float(lat)
+            user_lng = float(lng)
+        except ValueError:
+            return Response(
+                {'error': 'lat and lng must be valid numbers.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Bounding box pre-filter to avoid full table scan
+        # 1 degree latitude ≈ 111 km
+        lat_delta = radius_km / 111.0
+        lng_delta = radius_km / (111.0 * math.cos(math.radians(user_lat)))
+
+        queryset = Workshop.objects.filter(
+            is_open=True,
+            latitude__range=(user_lat - lat_delta, user_lat + lat_delta),
+            longitude__range=(user_lng - lng_delta, user_lng + lng_delta),
+        )
+
         if service_type:
-            q &= Q(service_type=service_type)
-        if city:
-            q &= Q(city__iexact=city)
-        items = Workshop.objects.filter(q)
-        page = self.paginate_queryset(items)
-        if page is not None:
-            return self.get_paginated_response(self.serializer_class(page, many=True).data)
-        return Response(self.serializer_class(items, many=True).data)
+            # services is a JSONField storing a list, e.g. ['car', 'bike']
+            queryset = queryset.filter(services__contains=service_type)
+
+        # Haversine exact distance calculation in Python
+        R = 6371  # Earth radius in km
+
+        def haversine(lat1, lon1, lat2, lon2):
+            dlat = math.radians(lat2 - lat1)
+            dlon = math.radians(lon2 - lon1)
+            a = (math.sin(dlat / 2) ** 2
+                 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2))
+                 * math.sin(dlon / 2) ** 2)
+            return R * 2 * math.asin(math.sqrt(a))
+
+        results = []
+        for workshop in queryset:
+            dist = haversine(user_lat, user_lng, float(workshop.latitude), float(workshop.longitude))
+            if dist <= radius_km:
+                data = self.serializer_class(workshop).data
+                data['distance_km'] = round(dist, 2)
+                results.append(data)
+
+        # Sort by closest first
+        results.sort(key=lambda x: x['distance_km'])
+
+        return Response(results)
 
     @action(detail=False, methods=['get'])
     def my_workshop(self, request):
         """Return the workshop owned by the current user."""
         if not request.user.is_authenticated:
             return Response({'detail': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
-        
+
         workshop = Workshop.objects.filter(owner=request.user).first()
         if workshop:
             return Response(self.serializer_class(workshop).data)

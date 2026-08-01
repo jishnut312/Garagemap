@@ -1,211 +1,137 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { getNearbyWorkshops, Workshop } from '@/lib/django-api';
+import { MapPin, Phone, Star, Navigation, AlertTriangle, Loader2, SlidersHorizontal } from 'lucide-react';
+import Link from 'next/link';
 
-// Dynamically import the map component to avoid SSR issues
+// Dynamically import map to avoid SSR issues
 const MapComponent = dynamic(() => import('./MapComponent'), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-96 bg-slate-100 rounded-lg flex items-center justify-center">
-      <div className="text-slate-600">Loading map...</div>
+    <div className="w-full h-full bg-slate-100 rounded-xl flex items-center justify-center">
+      <Loader2 className="w-8 h-8 text-slate-400 animate-spin" />
     </div>
-  )
+  ),
 });
 
-interface Garage {
-  id: string;
-  name: string;
-  lat: number;
-  lng: number;
-  type: string;
-  address?: string;
-  phone?: string;
-  website?: string;
-}
+const SERVICE_LABELS: Record<string, string> = {
+  car: 'Car Repair',
+  bike: 'Bike Repair',
+  truck: 'Truck Repair',
+  emergency: 'Emergency',
+  towing: 'Towing',
+  inspection: 'Inspection',
+};
+
+const SERVICE_COLORS: Record<string, string> = {
+  car: 'bg-blue-100 text-blue-700',
+  bike: 'bg-green-100 text-green-700',
+  truck: 'bg-orange-100 text-orange-700',
+  emergency: 'bg-red-100 text-red-700',
+  towing: 'bg-purple-100 text-purple-700',
+  inspection: 'bg-slate-100 text-slate-700',
+};
 
 export default function FindGaragePage() {
-  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
-  const [garages, setGarages] = useState<Garage[]>([]);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [workshops, setWorkshops] = useState<Workshop[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchRadius, setSearchRadius] = useState(5000); // 5km default
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [radiusKm, setRadiusKm] = useState(10);
+  const [serviceFilter, setServiceFilter] = useState('');
+  const [selected, setSelected] = useState<Workshop | null>(null);
 
-  // Get user's current location
-  const getCurrentLocation = () => {
+  const fetchNearby = async (lat: number, lng: number, radius: number, service: string) => {
     setLoading(true);
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const location = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          };
-          setUserLocation(location);
-          searchNearbyGarages(location.lat, location.lng);
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-          // Default to a sample location (you can change this)
-          const defaultLocation = { lat: 40.7128, lng: -74.0060 }; // New York
-          setUserLocation(defaultLocation);
-          searchNearbyGarages(defaultLocation.lat, defaultLocation.lng);
-        }
-      );
-    } else {
-      console.error('Geolocation is not supported');
-      setLoading(false);
-    }
-  };
-
-  // Search for nearby garages using Overpass API (free)
-  const searchNearbyGarages = async (lat: number, lng: number) => {
     try {
-      const overpassQuery = `
-        [out:json][timeout:25];
-        (
-          node["shop"="car_repair"](around:${searchRadius},${lat},${lng});
-          node["amenity"="fuel"](around:${searchRadius},${lat},${lng});
-          node["shop"="car"](around:${searchRadius},${lat},${lng});
-          node["amenity"="parking"](around:${searchRadius},${lat},${lng});
-          node["craft"="car_repair"](around:${searchRadius},${lat},${lng});
-          node["shop"="tyres"](around:${searchRadius},${lat},${lng});
-          node["shop"="car_parts"](around:${searchRadius},${lat},${lng});
-          node["amenity"="car_wash"](around:${searchRadius},${lat},${lng});
-          way["shop"="car_repair"](around:${searchRadius},${lat},${lng});
-          way["amenity"="fuel"](around:${searchRadius},${lat},${lng});
-          way["craft"="car_repair"](around:${searchRadius},${lat},${lng});
-          way["shop"="tyres"](around:${searchRadius},${lat},${lng});
-          way["shop"="car_parts"](around:${searchRadius},${lat},${lng});
-          way["amenity"="car_wash"](around:${searchRadius},${lat},${lng});
-        );
-        out center;
-      `;
-
-      const response = await fetch('https://overpass-api.de/api/interpreter', {
-        method: 'POST',
-        body: overpassQuery,
-        headers: {
-          'Content-Type': 'text/plain',
-        },
+      const results = await getNearbyWorkshops({
+        lat,
+        lng,
+        radius,
+        ...(service ? { service_type: service } : {}),
       });
-
-      const data = await response.json();
-      
-      const foundGarages: Garage[] = data.elements.map((element: any, index: number) => ({
-        id: element.id?.toString() || index.toString(),
-        name: element.tags?.name || getBusinessTypeName(element.tags),
-        lat: element.lat || element.center?.lat,
-        lng: element.lon || element.center?.lon,
-        type: getBusinessType(element.tags),
-        address: element.tags?.['addr:full'] || element.tags?.['addr:street'],
-        phone: element.tags?.phone,
-        website: element.tags?.website,
-      })).filter((garage: Garage) => garage.lat && garage.lng);
-
-      setGarages(foundGarages);
-    } catch (error) {
-      console.error('Error fetching garages:', error);
+      setWorkshops(results);
+    } catch (err) {
+      console.error('Failed to fetch nearby workshops:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const getBusinessType = (tags: any) => {
-    if (tags?.shop === 'car_repair' || tags?.craft === 'car_repair') return 'Auto Repair';
-    if (tags?.amenity === 'fuel') return 'Petrol Station';
-    if (tags?.shop === 'car') return 'Car Dealership';
-    if (tags?.amenity === 'parking') return 'Parking Garage';
-    if (tags?.shop === 'tyres') return 'Tyre Workshop';
-    if (tags?.shop === 'car_parts') return 'Parts Store';
-    if (tags?.amenity === 'car_wash') return 'Car Wash';
-    return 'Automotive Service';
-  };
+  const getLocation = () => {
+    setLocationError(null);
+    setLoading(true);
 
-  const getBusinessTypeName = (tags: any) => {
-    if (tags?.shop === 'car_repair' || tags?.craft === 'car_repair') return 'Auto Repair Workshop';
-    if (tags?.amenity === 'fuel') return 'Petrol Station';
-    if (tags?.shop === 'car') return 'Car Dealership';
-    if (tags?.amenity === 'parking') return 'Parking Garage';
-    if (tags?.shop === 'tyres') return 'Tyre Workshop';
-    if (tags?.shop === 'car_parts') return 'Auto Parts Store';
-    if (tags?.amenity === 'car_wash') return 'Car Wash Service';
-    return 'Automotive Business';
-  };
-
-  // Open directions to garage
-  const openDirections = (lat: number, lng: number) => {
-    // Try to open in Google Maps app first, fallback to web
-    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-    const appleMapsUrl = `http://maps.apple.com/?daddr=${lat},${lng}`;
-    
-    // Detect if on mobile
-    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    
-    if (isMobile && isIOS) {
-      // Try Apple Maps first on iOS
-      window.open(appleMapsUrl, '_blank');
-    } else {
-      // Use Google Maps for all other cases
-      window.open(googleMapsUrl, '_blank');
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation is not supported by your browser.');
+      setLoading(false);
+      return;
     }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const loc = { lat: position.coords.latitude, lng: position.coords.longitude };
+        setUserLocation(loc);
+        fetchNearby(loc.lat, loc.lng, radiusKm, serviceFilter);
+      },
+      (err) => {
+        const messages: Record<number, string> = {
+          1: 'Location access denied. Please allow location in your browser.',
+          2: 'Location unavailable. Try again.',
+          3: 'Location request timed out.',
+        };
+        setLocationError(messages[err.code] || 'Could not get your location.');
+        setLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
   };
 
-  // Contact garage function
-  const contactGarage = (garage: Garage) => {
-    if (garage.phone) {
-      // If phone number exists, offer to call
-      const cleanPhone = garage.phone.replace(/[^\d+]/g, '');
-      if (confirm(`Call ${garage.name} at ${garage.phone}?`)) {
-        window.open(`tel:${cleanPhone}`, '_self');
-      }
-    } else if (garage.website) {
-      // If website exists, open it
-      window.open(garage.website, '_blank');
-    } else {
-      // Fallback: Search for the business online
-      const searchQuery = encodeURIComponent(`${garage.name} ${garage.type} contact`);
-      window.open(`https://www.google.com/search?q=${searchQuery}`, '_blank');
+  // Re-fetch when filters change (if we already have location)
+  const applyFilters = () => {
+    if (userLocation) {
+      fetchNearby(userLocation.lat, userLocation.lng, radiusKm, serviceFilter);
     }
   };
 
   useEffect(() => {
-    getCurrentLocation();
+    getLocation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Map-compatible garage format
+  const mapGarages = workshops.map((w) => ({
+    id: String(w.id),
+    name: w.workshop_name,
+    lat: Number(w.latitude),
+    lng: Number(w.longitude),
+    type: w.services?.[0] ? SERVICE_LABELS[w.services[0]] : 'Workshop',
+    address: w.address,
+    phone: w.phone,
+  }));
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Navigation */}
-      <nav className="bg-slate-900/95 backdrop-blur-xl border-b border-slate-800">
+      {/* Nav */}
+      <nav className="bg-slate-900/95 backdrop-blur-xl border-b border-slate-800 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-red-400 rounded-xl flex items-center justify-center">
-                <span className="text-white font-semibold text-lg">G</span>
+          <div className="flex justify-between items-center py-5">
+            <Link href="/" className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
+                <span className="text-white font-bold text-xl">G</span>
               </div>
-              <span className="text-2xl font-semibold text-white tracking-tight">GarageMap</span>
-            </div>
+              <span className="text-2xl font-bold text-white tracking-tight">GarageMap</span>
+            </Link>
             <div className="hidden md:flex items-center space-x-8">
-              <a href="/" className="text-slate-300 hover:text-white font-medium transition-colors">Home</a>
-              <a href="/find-garage" className="text-white font-medium">Garages</a>
-              <a href="/services" className="text-slate-300 hover:text-white font-medium transition-colors">Services</a>
-              <a href="/login" className="text-slate-300 hover:text-white font-medium transition-colors">Login</a>
-              <a href="/emergency" className="bg-red-500 text-white px-4 py-2 rounded-full font-medium hover:bg-red-600 transition-all duration-300 flex items-center gap-2 animate-pulse">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-                Emergency
-              </a>
-              <a href="/signup" className="bg-red-400 text-white px-6 py-2.5 rounded-full font-medium hover:bg-red-500 transition-all duration-300">Get Started</a>
-            </div>
-            
-            {/* Mobile menu button */}
-            <div className="md:hidden">
-              <button className="text-slate-300 hover:text-white">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
+              <Link href="/" className="text-slate-300 hover:text-white font-medium transition-colors">Home</Link>
+              <Link href="/find-garage" className="text-white font-semibold border-b-2 border-red-500 pb-0.5">Garages</Link>
+              <Link href="/services" className="text-slate-300 hover:text-white font-medium transition-colors">Services</Link>
+              <Link href="/login" className="text-slate-300 hover:text-white font-medium transition-colors">Login</Link>
+              <Link href="/emergency" className="bg-red-500 text-white px-4 py-2 rounded-full font-medium hover:bg-red-600 transition-all flex items-center gap-2 animate-pulse">
+                <AlertTriangle className="w-4 h-4" /> Emergency
+              </Link>
             </div>
           </div>
         </div>
@@ -214,99 +140,206 @@ export default function FindGaragePage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-slate-900 mb-4">Find Nearest Garages & Workshops</h1>
-          <p className="text-xl text-slate-600">Discover automotive services, workshops, and repair facilities near your location</p>
+          <h1 className="text-4xl font-bold text-slate-900 mb-3">Find Nearby Garages</h1>
+          <p className="text-lg text-slate-600">
+            Registered workshops near you — sorted by distance
+          </p>
         </div>
 
         {/* Controls */}
-        <div className="bg-white rounded-xl p-6 shadow-lg mb-8">
-          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-            <div className="flex items-center gap-4">
+        <div className="bg-white rounded-2xl p-5 shadow-md mb-6 border border-slate-100">
+          <div className="flex flex-col md:flex-row gap-4 items-start md:items-end">
+            {/* Location button */}
+            <div className="flex-1 min-w-0">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Your Location</label>
               <button
-                onClick={getCurrentLocation}
+                id="btn-get-location"
+                onClick={getLocation}
                 disabled={loading}
-                className="bg-red-400 text-white px-6 py-3 rounded-full font-medium hover:bg-red-500 transition-colors disabled:opacity-50 flex items-center gap-2"
+                className="w-full bg-gradient-to-r from-red-500 to-orange-500 text-white px-5 py-2.5 rounded-xl font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                {loading ? 'Searching...' : 'Find My Location'}
+                {loading ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Searching...</>
+                ) : (
+                  <><Navigation className="w-4 h-4" /> Use My Location</>
+                )}
               </button>
-              
+            </div>
+
+            {/* Radius */}
+            <div className="w-full md:w-44">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Radius</label>
               <select
-                value={searchRadius}
-                onChange={(e) => setSearchRadius(Number(e.target.value))}
-                className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-400"
+                id="select-radius"
+                value={radiusKm}
+                onChange={(e) => setRadiusKm(Number(e.target.value))}
+                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 bg-slate-50"
               >
-                <option value={1000}>1 km radius</option>
-                <option value={2000}>2 km radius</option>
-                <option value={5000}>5 km radius</option>
-                <option value={10000}>10 km radius</option>
-                <option value={20000}>20 km radius</option>
+                <option value={2}>2 km</option>
+                <option value={5}>5 km</option>
+                <option value={10}>10 km</option>
+                <option value={20}>20 km</option>
+                <option value={50}>50 km</option>
               </select>
             </div>
-            
-            <div className="text-slate-600">
-              Found {garages.length} automotive services
+
+            {/* Service filter */}
+            <div className="w-full md:w-52">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Service Type</label>
+              <select
+                id="select-service-type"
+                value={serviceFilter}
+                onChange={(e) => setServiceFilter(e.target.value)}
+                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 bg-slate-50"
+              >
+                <option value="">All Services</option>
+                {Object.entries(SERVICE_LABELS).map(([val, label]) => (
+                  <option key={val} value={val}>{label}</option>
+                ))}
+              </select>
             </div>
+
+            {/* Apply */}
+            <button
+              id="btn-apply-filters"
+              onClick={applyFilters}
+              disabled={!userLocation || loading}
+              className="flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-slate-700 transition disabled:opacity-40 whitespace-nowrap"
+            >
+              <SlidersHorizontal className="w-4 h-4" /> Apply Filters
+            </button>
           </div>
+
+          {/* Error */}
+          {locationError && (
+            <div className="mt-4 flex items-center gap-2 text-red-600 bg-red-50 rounded-xl px-4 py-3 text-sm">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" /> {locationError}
+            </div>
+          )}
+
+          {/* Summary */}
+          {userLocation && !loading && (
+            <p className="mt-3 text-sm text-slate-500">
+              📍 {userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)} &nbsp;·&nbsp;
+              <span className="font-semibold text-slate-700">{workshops.length}</span> workshop{workshops.length !== 1 ? 's' : ''} found within {radiusKm} km
+            </p>
+          )}
         </div>
 
-        {/* Map and Results */}
-        <div className="grid lg:grid-cols-3 gap-8">
+        {/* Map + List */}
+        <div className="grid lg:grid-cols-3 gap-6">
           {/* Map */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-              <MapComponent 
-                userLocation={userLocation}
-                garages={garages}
-                loading={loading}
-              />
-            </div>
+          <div className="lg:col-span-2 bg-white rounded-2xl shadow-md overflow-hidden border border-slate-100" style={{ height: 560 }}>
+            <MapComponent
+              userLocation={userLocation}
+              garages={mapGarages}
+              loading={loading}
+            />
           </div>
 
           {/* Results List */}
-          <div className="space-y-4">
-            <h3 className="text-xl font-semibold text-slate-900">Nearby Services</h3>
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {garages.map((garage) => (
-                <div key={garage.id} className="bg-white rounded-lg p-4 shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
-                  <h4 className="font-semibold text-slate-900">{garage.name}</h4>
-                  <p className="text-sm text-slate-600 mb-2">{garage.type}</p>
-                  {garage.address && (
-                    <p className="text-sm text-slate-500 mb-2">{garage.address}</p>
-                  )}
-                  {garage.phone && (
-                    <p className="text-sm text-slate-500 mb-2">📞 {garage.phone}</p>
-                  )}
-                  <div className="flex gap-2 mt-3">
-                    <button 
-                      onClick={() => openDirections(garage.lat, garage.lng)}
-                      className="bg-red-400 text-white px-3 py-1 rounded text-sm hover:bg-red-500 transition-colors"
-                    >
-                      Directions
-                    </button>
-                    <button 
-                      onClick={() => contactGarage(garage)}
-                      className="border border-slate-300 text-slate-700 px-3 py-1 rounded text-sm hover:bg-slate-50 transition-colors"
-                    >
-                      Contact
-                    </button>
+          <div className="flex flex-col gap-3 max-h-[560px] overflow-y-auto pr-1">
+            <h2 className="text-lg font-bold text-slate-900 px-1">
+              Nearby Workshops
+              {workshops.length > 0 && (
+                <span className="ml-2 text-sm font-normal text-slate-500">({workshops.length})</span>
+              )}
+            </h2>
+
+            {loading && (
+              <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+                <Loader2 className="w-8 h-8 animate-spin mb-3" />
+                <p className="text-sm">Finding nearby workshops…</p>
+              </div>
+            )}
+
+            {!loading && workshops.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-16 text-slate-400 text-center">
+                <MapPin className="w-12 h-12 mb-3 text-slate-300" />
+                <p className="font-medium text-slate-600">No workshops found</p>
+                <p className="text-sm mt-1">Try increasing the radius or changing the service filter.</p>
+              </div>
+            )}
+
+            {!loading && workshops.map((w) => (
+              <div
+                key={w.id}
+                onClick={() => setSelected(selected?.id === w.id ? null : w)}
+                className={`bg-white rounded-xl p-4 shadow-sm border cursor-pointer transition-all duration-200 hover:shadow-md hover:border-red-200
+                  ${selected?.id === w.id ? 'border-red-400 ring-2 ring-red-100' : 'border-slate-100'}`}
+              >
+                {/* Header row */}
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-slate-900 truncate">{w.workshop_name}</h3>
+                    <p className="text-sm text-slate-500 truncate">{w.mechanic_name}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                    {w.distance_km !== undefined && (
+                      <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded-full whitespace-nowrap">
+                        {w.distance_km} km
+                      </span>
+                    )}
+                    {w.rating !== undefined && w.rating > 0 && (
+                      <span className="flex items-center gap-0.5 text-xs text-yellow-600 font-medium">
+                        <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                        {Number(w.rating).toFixed(1)}
+                      </span>
+                    )}
                   </div>
                 </div>
-              ))}
-              
-              {garages.length === 0 && !loading && (
-                <div className="text-center py-8 text-slate-500">
-                  <svg className="w-12 h-12 mx-auto mb-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  <p>Click "Find My Location" to discover nearby garages and automotive services.</p>
-                </div>
-              )}
-            </div>
+
+                {/* Services */}
+                {w.services && w.services.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {w.services.slice(0, 3).map((s) => (
+                      <span key={s} className={`text-xs px-2 py-0.5 rounded-full font-medium ${SERVICE_COLORS[s] || 'bg-slate-100 text-slate-600'}`}>
+                        {SERVICE_LABELS[s] || s}
+                      </span>
+                    ))}
+                    {w.services.length > 3 && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                        +{w.services.length - 3}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Expanded details */}
+                {selected?.id === w.id && (
+                  <div className="border-t border-slate-100 pt-3 mt-1 space-y-2 text-sm text-slate-600 animate-in fade-in duration-150">
+                    {w.address && (
+                      <div className="flex items-start gap-2">
+                        <MapPin className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
+                        <span>{w.address}{w.city ? `, ${w.city}` : ''}</span>
+                      </div>
+                    )}
+                    {w.phone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                        <a href={`tel:${w.phone}`} className="text-red-500 hover:underline font-medium">{w.phone}</a>
+                      </div>
+                    )}
+                    <div className="flex gap-2 pt-1">
+                      <a
+                        href={`https://www.google.com/maps/dir/?api=1&destination=${w.latitude},${w.longitude}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 text-center bg-red-500 hover:bg-red-600 text-white text-xs font-semibold py-2 rounded-lg transition"
+                      >
+                        Directions
+                      </a>
+                      <Link
+                        href={`/request/${w.id}`}
+                        className="flex-1 text-center bg-slate-900 hover:bg-slate-700 text-white text-xs font-semibold py-2 rounded-lg transition"
+                      >
+                        Request Service
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>
